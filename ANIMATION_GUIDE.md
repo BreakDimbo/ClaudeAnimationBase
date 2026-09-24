@@ -260,6 +260,14 @@ node render.mjs --encode --out=out/video.mp4                    # … then encod
 - **p5.brush quirks:**
   - Colours mix like pigment: yellow over blue makes green. Layer light colours over dark ones with a full-opacity `wash`, or use `glow()`.
   - `wash` at 255 is exact colour; lower opacities mix.
+  - Strokes drawn far from the origin under a zoomed camera collapse: from zoom ~2, an outline or a line at large
+    world coordinates leaves only a dot at its first vertex. `paint()` and `inkLine()` draw each shape around its own
+    centre, which avoids it. A shape much bigger than the canvas can still lose its outline: draw long edges as
+    `inkLine`s no bigger than the canvas.
+  - Outline weight is in world units, so it grows with the camera's zoom: a fine outline on a small shape becomes a
+    dark blob in a close-up. Scale `sw` down with the zoom for small shapes.
+  - A NaN in a point list throws `Failed to construct 'OffscreenCanvas': Value is not of type 'unsigned long'`, with
+    a stack pointing at your scene rather than the NaN. Guard geometry that can degenerate (`Math.acos` of a ratio > 1).
   - p5 `push()/pop()/translate()/rotate()/scale()` work with all brush calls.
   - Cost is the number of `fill` shapes and strokes: hundreds are fine, thousands are not. Aim for ≤ 1.5 s per frame. The render log prints ms/frame.
   - Some scenes make p5.brush log five `WebGL: INVALID_OPERATION ... not from the associated program` warnings once per page. They're harmless (frames come out identical). Any other page error is real.
