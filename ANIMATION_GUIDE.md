@@ -177,6 +177,9 @@ node render.mjs --sheet=0.1,0.8,1.6,2.4,3.1,3.9 --cols=6 --w=320 --out=out/check
 node render.mjs --strip=2.1:2.6 --cols=6 --w=320 --out=out/check/strip.jpg
 # crop: full-resolution detail (faces, hands, contacts, glows); crop=x,y,w,h in frame pixels
 node render.mjs --sheet=2.3,2.4 --crop=760,420,500,400 --w=500 --out=out/check/face.jpg
+# crop-at: the same, following a WORLD point through each frame's camera (a foot or a prop on a moving shot);
+# x,y in world pixels (or an expression evaluated in the page), w,h in frame pixels
+node render.mjs --strip=2.1:2.6 --crop-at=960,700,500,400 --out=out/check/feet.jpg
 ```
 
 Open each image and actually look at it. Check:
