@@ -2,7 +2,7 @@
 //   node tools/render.mjs --sheet=0.5,1,2 [--cols=4] [--w=480] [--view=cast] --out=contact/a.jpg   contact sheet
 //   node tools/render.mjs --frames [--range=a:b] [--workers=4]                                     JPEG frames → frames/
 //   node tools/render.mjs --audio --out=build/audio.wav                                              the soundtrack, same timeline
-//   node tools/render.mjs --encode --out=第十六个月饼.mp4                                            frames + audio → MP4
+//   node tools/render.mjs --encode --out=日色变得慢.mp4                                            frames + audio → MP4
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import { spawn, execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, statSync, renameSync, readdirSync } from 'node:fs';
@@ -17,7 +17,7 @@ const FFMPEG = process.env.FFMPEG || (() => { try { return execSync(`python3 -c 
 const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { stdio: 'inherit' }); p.on('close', c => c ? bad(new Error(cmd + ' exited ' + c)) : ok()); });
 
 if (args.encode) {
-  const out = resolve(ROOT, args.out || '第十六个月饼.mp4'), wav = ROOT + '/build/audio.wav';
+  const out = resolve(ROOT, args.out || '日色变得慢.mp4'), wav = ROOT + '/build/audio.wav';
   const fps = 24;
   await run(FFMPEG, ['-y', '-loglevel', 'error', '-stats', '-framerate', String(fps), '-i', `${FRAMES}/f%05d.jpg`, '-i', wav,
     '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest',

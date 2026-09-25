@@ -1,675 +1,441 @@
-// ───────────────────────── scenes: 《一滴月亮》, twelve shots on one 180-second timeline ─────────────────────────
-// Every shot is fn(lt, t, dur); lt = time inside the shot. One camera move per storyboard row.
+// ───────────────────────── scenes: 《日色变得慢》, ten shots on one 180-second timeline ─────────────────────────
+// Every shot is fn(lt, t, dur); lt = time inside the shot (negative while it dissolves in). One camera move per row.
 const VIEWS = {};
 
 // ── shared pieces ──
-// a round watercolour window with a close-up inside (expressions are small on the cards, so close-ups live in these)
-function moonWindow(key, role, from, to, k, x, y, r, col, t, o = {}) {
-  if (r < 2) return;
-  wcAt(key + 'bg', UNIT(22), col, x, y, r * 1.02, { a: .1, spread: .25, edge: .4 });
-  ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * .97, 0, TAU); ctx.clip();
-  wcAt(key + 'bg2', UNIT(16), mix(col, '#FFFFFF', .4), x - r * .3, y - r * .35, r * .6, { a: .08, wet: true, mul: false });
-  bust(role, from, to, k, x + (o.dx || 0), y + r * (o.bottom ?? 1.02), r * (o.size ?? 1.62));
-  if (o.inside) o.inside();
-  ctx.restore();
-  wcAt(key + 'rim', UNIT(22), mix(col, '#302040', .3), x, y, r, { a: 0, layers: 1, edge: .7, edgeW: 3 });
-}
-const sky = (key, cols, o = {}) => layer(key, -200, -200, W + 400, H + 400, () => {
-  wcBands(key, -200, -200, W + 400, o.h ?? 900, cols, { a: o.a ?? .06 });
-  if (o.ground) wcRect(key + 'g', -240, o.gy ?? 760, W + 480, 700, o.ground, { a: .06, spread: .3, wet: true });
+// a wet-in-wet sky (or any band stack) painted once into a cached layer
+// night skies get a clean gradient under the washes (dark multiply washes alone turn grey on the paper)
+const bandsL = (key, x, y, w, h, cols, a = .07) => layer(key, x, y, w, h, () => {
+  if (lum(cols[0]) < .3) {
+    const g = ctx.createLinearGradient(0, y, 0, y + h); cols.forEach((c, i) => g.addColorStop(i / (cols.length - 1), c));
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    wcBands(key, x, y, w, h, cols.map(c => mix(c, '#8A90C0', .35)), { a: .035 });
+  } else wcBands(key, x, y, w, h, cols, { a });
 });
-
-// ═════════ 镜1 纸 (0–10) ═════════
-function S1(lt, t) {
-  const z = kf(lt, [[3, 1], [6, 1.18]], ease), cx = kf(lt, [[6, 960], [10, 1560]], easeIO);
-  camBegin(cx, 540, z);
-  const fall = seg(lt, .6, 2.6), land = lt > 2.6;
-  if (!land) {
-    const y = lerp(-80, 560, easeIn(fall));
-    ctx.save(); ctx.globalAlpha = .5 * fall; wcStroke('s1trail', [[960, y - 180], [960, y - 20]], 1, 10, GOLD, { a: .05, layers: 5 }); ctx.restore();
-    drop(960, y, 22, t, { sy: 1.25, sx: .85, glowA: .12 });
-  } else {
-    wcBloom('s1bloom', 960, 572, 120, GOLD, seg(lt, 2.6, 3.5), { a: .06 });
-    spatter('s1sp', 960, 572, 190 * easeOut(seg(lt, 2.6, 3)), 36, GOLD, { size: 4, a: .45, sy: .5 });
-    const roll = seg(lt, 6.8, 10), wob = lt < 6.8 ? spring(lt, 6, 2.5, 3) * .25 : 0;
-    const x = lerp(960, 2560, easeIn(roll) * .6 + roll * .4), sq = lt < 3.2 ? .35 * (1 - seg(lt, 2.6, 3.2)) : 0;
-    drop(x, 548 - sq * 20, 26 + 4 * seg(lt, 2.6, 4), t, { sx: 1 + sq + wob, sy: 1 - sq - wob, glowA: .2 });
-    if (lt > 7) {           // the rabbit bleeds out of the white of the paper and gives chase
-      const a = seg(lt, 7, 7.8);
-      wcBloom('s1rb', 1100, 560, 90, '#B7C4E2', a, { a: .05 });
-      rabbitRun(1100, 2300, 580, 62, lt, 7.9, 10.2, 2.4, { alpha: a });
-    }
-  }
-  camEnd();
-  paperCover(1 - ease(seg(lt, 0, .7)));
+// draw another drawing over the frame at alpha a (dissolves inside a shot)
+const BUF2 = document.createElement('canvas'); BUF2.width = W; BUF2.height = H;
+function blend(a, fn) {
+  if (a <= 0) return;
+  const main = ctx; ctx = BUF2.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  paperUnder(); fn(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx = main;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = clamp(a); ctx.drawImage(BUF2, 0, 0); ctx.restore();
 }
-
-// ═════════ 镜2 二舅 · 二舅妈 · 袋袋 (10–22) · 淡蓝 ═════════
-function S2(lt, t) {
-  ambient(['#9DB6DC', .1], ['#FFF4E0', .12]);
-  const blue = ['#AFC6E6', '#C8D8EC', '#E6EDF2'];
-  if (lt < 3) {                                   // 10–13 the drop rolls in and bounces at 袋袋's feet
-    camBegin(960, 540, 1);
-    sky('s2sky', blue, { ground: '#C9D3DF', gy: 820 });
-    puppet('erjiu', 'main', 640, 1010, 800, { t });
-    puppet('erjiumu', 'main', 1300, 1010, 800, { t });
-    puppet('daidai', 'main', 970, 1010, 800, { t });
-    const k = seg(lt, 0, 2.4), x = lerp(-60, 860, easeOut(k)), b = hop(lt, 2.3, 2.75, 70);
-    drop(x, 975 + b.dy, 24, t, { sx: 1 + b.sq, sy: 1 - b.sq });
-    rabbitRun(-200, 420, 1000, 55, lt, .3, 2.6);
-    camEnd();
-  } else if (lt < 6) {                            // 13–16 袋袋 in a round window: the drop lands between her V fingers, she smiles
-    const z = kf(lt, [[3, 1], [6, 1.08]], ease);
-    camBegin(960, 540, z);
-    sky('s2sky', blue, { ground: '#C9D3DF', gy: 820 });
-    const k = backOut(seg(lt, 3, 3.6));
-    moonWindow('s2w', 'daidai', 'e0', 'e1', seg(lt, 4.4, 5.1), 960, 520, 380 * k, '#AFC6E6', t, { size: 1.8, bottom: 1.08 });
-    const up = seg(lt, 3.4, 4.3), [x, y] = arcPt([700, 1000], [960 + 330, 250], 200, easeOut(up));
-    drop(x, y, 24, t);
-    camEnd();
-  } else if (lt < 9) {                            // 16–19 二舅 and 二舅妈 stand back to back and, at the same moment, lean back a little
-    camBegin(960, 540, 1);
-    sky('s2sky', blue, { ground: '#C9D3DF', gy: 820 });
-    const lean = ease(seg(lt, 6.8, 7.8));
-    puppet('erjiu', 'side', 880 - lean * 10, 1010, 820, { t, flip: true, rot: .05 * lean });
-    puppet('erjiumu', 'side', 1060 + lean * 10, 1010, 820, { t, rot: -.05 * lean });
-    puppet('daidai', 'main', 1480, 1030, 700, { t });
-    drop(1290, 360 + Math.sin(t * 2) * 10, 24, t);
-    camEnd();
-  } else {                                        // 19–22 the drop falls into a puddle at their feet; the blue spreads into a river (tilt down)
-    const cy = kf(lt, [[9, 440], [12, 900]], easeIO);
-    camBegin(960, cy, 1.2);
-    sky('s2sky', blue, { ground: '#C9D3DF', gy: 820 });
-    puppet('erjiu', 'side', 870, 1010, 820, { t, flip: true, rot: .05 });
-    puppet('erjiumu', 'side', 1070, 1010, 820, { t, rot: -.05 });
-    puppet('daidai', 'main', 1480, 1030, 700, { t });
-    const k = seg(lt, 9.2, 10.8);
-    if (k < 1) drop(lerp(1290, 1180, k), lerp(360, 1000, easeIn(k)), 24, t);
-    wcBloom('s2pud', 1180, 1020, 160, '#6D8BC4', seg(lt, 10.8, 11.3), { a: .08 });
-    const fl = seg(lt, 10.9, 12);
-    if (fl > 0) { wcBloom('s2flood', 1180, 950, 900, '#2D4A8A', fl, { a: .09 }); wcBloom('s2flood2', 900, 1000, 700, '#1F356E', seg(lt, 11.2, 12), { a: .09 }); }
-    camEnd();
-  }
-}
-// where the lenses sit on the 'face' sprites: [x offset, height from the bottom] as fractions of the sprite
-const GLASSES = { rere: [.17, .58], wo: [.19, .62] };
-
-// ═════════ 镜3 我 & 璐璐 (22–34) · 靛蓝 ═════════
-function riverBG(key) {
-  layer(key, -600, -900, W + 1400, H + 1100, () => {
-    wcBands(key + 'sky', -600, -900, W + 1400, 1400, ['#6F7FB8', '#98A6CF', '#C5CDE3'], { a: .07 });
-    wcBands(key + 'water', -600, 640, W + 1400, 640, ['#2D3A7A', '#23306A', '#1B2659'], { a: .09 });
-    for (let i = 0; i < 18; i++) { const y = 700 + i * 22 + (i % 3) * 7, x = -500 + hash(key, i) * (W + 1200); wcStroke(key + 'rip' + i, [[x, y], [x + 120 + hash(key, i, 1) * 200, y + 4]], 3, 1, '#C8D2EE', { a: .12, layers: 5, mul: false }); }
-  });
-}
-function S3(lt, t) {
-  ambient(['#6F7FB8', .14], ['#DDE4FF', .1]);
-  const KEYS = 6, keyX = i => 620 + i * 190, keyY = 880;
-  if (lt < 7) {                                   // 22–25 the boat drifts in (pan); 25–29 his stripes become keys
-    const cx = lt < 3 ? kf(lt, [[0, 420], [3, 960]], easeOut) : 960;
-    camBegin(cx, 540, 1);
-    riverBG('s3r');
-    const bx = lt < 3 ? lerp(-100, 400, easeOut(seg(lt, 0, 3))) : 400, rock = Math.sin(t * 1.6) * .03;
-    puppet('wo', 'main', bx - 70, 930, 640, { t, rot: rock, shadow: false });
-    puppet('lulu', 'main', bx + 80, 930, 640, { t, rot: rock, shadow: false });
-    paperBoat(bx, 950, 270, rock);
-    const peel = seg(lt, 3.2, 4.6);
-    for (let i = 0; i < KEYS; i++) {
-      const k = clamp(peel * 1.6 - i * .12), sx = bx - 60, sy = 560 + i * 24;
-      const x = lerp(sx, keyX(i), easeIO(k)), y = lerp(sy, keyY, easeIO(k)) - Math.sin(k * Math.PI) * 120;
-      const hit = lt > 4.6 && Math.abs(lt - (4.8 + i * .38)) < .12;
-      if (k > 0) { wcStroke('s3keyc' + i, [[x - 80, y], [x + 80, y + 2]], 30, 28, hit ? '#FFE2A0' : '#F4ECD6', { a: .2, mul: false }); wcStroke('s3key' + i, [[x - 76, y + 4], [x + 76, y + 6]], 8, 7, hit ? '#E8A33A' : '#2D3A6A', { a: .2, mul: false }); }
-      if (hit) spatter('s3hit' + i, x, y, 60, 14, GOLD, { size: 3, a: .6, mul: false });
-    }
-    if (lt > 4.6) {
-      const i = Math.min(KEYS - 1, Math.floor((lt - 4.6) / .38)), k = ((lt - 4.6) / .38) % 1;
-      const [x, y] = i < KEYS - 1 ? arcPt([keyX(i), keyY - 26], [keyX(i + 1), keyY - 26], 110, k) : [keyX(KEYS - 1), keyY - 26];
-      drop(x, y, 20, t);
-    } else drop(bx + 200, 860, 20, t);
-    rabbit(bx + 190, 915, 36, t, { alpha: .95 });
-    camEnd();
-  } else if (lt < 10) {                           // 29–32 two round windows side by side: he smiles, then she does
-    const z = kf(lt, [[7, 1], [10, 1.08]], ease);
-    camBegin(960, 540, z);
-    riverBG('s3r');
-    moonWindow('s3w', 'wo', 'e0', 'e1', seg(lt, 7.6, 8.3), 700, 520, 300, '#6F7FB8', t, { size: 1.75, bottom: 1.08 });
-    moonWindow('s3w2', 'lulu', 'e0', 'e1', seg(lt, 8.5, 9.2), 1240, 520, 300, '#98A6CF', t, { size: 1.85, bottom: 1.08 });
-    camEnd();
-  } else {                                        // 32–34 the last key flings the drop up; stripes become lines in the sky
-    const cy = kf(lt, [[10, 540], [12, 60]], easeIO);
-    camBegin(960, cy, 1);
-    riverBG('s3r');
-    for (let i = 0; i < KEYS; i++) { wcStroke('s3keyc' + i, [[keyX(i) - 80, keyY], [keyX(i) + 80, keyY + 2]], 30, 28, '#F4ECD6', { a: .2, mul: false }); wcStroke('s3key' + i, [[keyX(i) - 76, keyY + 4], [keyX(i) + 76, keyY + 6]], 8, 7, '#2D3A6A', { a: .2, mul: false }); }
-    const k = seg(lt, 10, 11.6), [x, y] = arcPt([keyX(KEYS - 1), keyY - 26], [1200, -420], 200, easeOut(k));
-    drop(x, y, 22, t);
-    for (let i = 0; i < 5; i++) { const a = seg(lt, 10.6 + i * .15, 11.6 + i * .15); if (a > 0) wcStroke('s3sl' + i, [[300, -120 - i * 60], [300 + 1300 * a, -118 - i * 60]], 12, 8, '#2D3A6A', { a: .12 }); }
-    camEnd();
-  }
-}
-
-// ═════════ 镜4 大舅 & 兜兜 (34–46) · 红白灰 ═════════
-function S4(lt, t) {
-  ambient(['#B8B8C8', .08], ['#FFF6EE', .12]);
-  const grey = ['#C8C8D2', '#DEDDE2', '#EFE9E2'];
-  const birds = (lt0) => { for (let i = 0; i < 14; i++) { const k = seg(lt, lt0 + i * .08, lt0 + 2.4 + i * .08); if (k <= 0) continue; const sx = 1080 + (hash('s4b', i) - .5) * 70, sy = 820 + hash('s4b', i, 1) * 200; const [x, y] = arcPt([sx, sy], [1300 + (hash('s4b', i, 2) - .5) * 360, 260 + hash('s4b', i, 3) * 110], 120, easeOut(k)); houndBird(x, y, 34 + hash('s4b', i, 4) * 18, t * 3 + i * .3, (hash('s4b', i, 5) - .5) * .5); } };
-  if (lt < 10) {
-    const z = lt < 3 ? 1.12 : lt < 7 ? kf(lt, [[3, 1.12], [7, 1]], ease) : 1;
-    camBegin(960, 560, z);
-    sky('s4sky', grey, { ground: '#D9C7C0', gy: 800 });
-    const lean = ease(seg(lt, 7.2, 8.4));
-    puppet('daju', 'front', 740, 1060, 900, { t });
-    puppet('doudou', 'front', 1080 - lean * 130, 1060, 900, { t, rot: -.06 * lean });
-    const fall = seg(lt, .3, 2.8), fx = 1300, fy = lt < 2.8 ? lerp(-100, 330, easeIn(fall)) : 330 + Math.sin(t * 2) * 10;
-    birds(3);
-    drop(fx, fy, 24, t);
-    camEnd();
-  } else {                                        // 44–46 pan: the flock carries the drop over roofs; feathers turn to gold
-    const cx = kf(lt, [[10, 960], [12, 1900]], easeIO);
-    camBegin(cx, 540, 1);
-    layer('s4roofs', -200, -200, 3400, 1480, () => {
-      wcBands('s4sky2', -200, -200, 3400, 900, grey, { a: .06 });
-      for (let i = 0; i < 9; i++) { const x = 300 + i * 330, h = 180 + hash('rf', i) * 120; wc('s4roof' + i, [[x - 190, 1080], [x - 190, 1080 - h], [x - 150, 1080 - h - 50], [x + 150, 1080 - h - 50], [x + 190, 1080 - h], [x + 190, 1080]], i % 2 ? '#6C7394' : '#8A8FAA', { a: .07, spread: .15 }); }
-    });
-    const fx = lerp(1300, 2700, easeIO(seg(lt, 10, 12)));
-    for (let i = 0; i < 14; i++) houndBird(fx - 150 + (hash('s4c', i) - .5) * 420, 300 + hash('s4c', i, 1) * 160 + Math.sin(t * 3 + i) * 10, 34 + hash('s4c', i, 2) * 18, t * 3 + i * .3);
-    drop(fx, 330, 24, t);
-    floretRain('s4fl', fx - 400, fx + 200, 350, 1100, 26, t, { a: seg(lt, 10.5, 11.5) });
-    camEnd();
-  }
-}
-
-// ═════════ 镜5 桐桐 · 三姨 · 三姨夫 (46–58) · 桂花金 ═════════
-function S5(lt, t) {
-  ambient(['#F0B860', .12], ['#FFE2A0', .22]);
-  const warm = ['#F3D9A4', '#F6E6C2', '#F2E9D6'];
-  const TX = 700;
-  const scene = (grow, shift) => {
-    sky('s5sky', warm, { ground: '#D8C590', gy: 830, h: 1000 });
-    osmanthusWC('s5tree', TX, 1000, 820, t, grow);
-    puppet('tongtong', 'front', lerp(TX + 60, 1330, shift), lerp(1060, 1010, shift), 880, { t, rot: Math.sin(shift * Math.PI) * .05 });
-    puppet('sanyifu', 'front', 1150, 1060, 900, { t });
-    puppet('sanyi', 'main', 1500, 1060, 880, { t });
-  };
-  if (lt < 3) {                                   // 46–49 tilt up: the pale branches on 桐桐's sweater grow into the tree
-    const cy = kf(lt, [[0, 760], [3, 330]], easeIO);
-    camBegin(960, cy, 1);
-    scene(easeOut(seg(lt, .2, 3)), 0);
-    camEnd();
-  } else if (lt < 9) {                            // 49–52 the drop in the treetop turns gold; 52–55 桐桐 steps over to shield his parents from the petals
-    camBegin(960, 330, 1);
-    scene(1, ease(seg(lt, 6.2, 7.4)));
-    rabbit(1780, 1010, 46, t, { hop: lt > 5 ? (lt * 1.5) % 1 : 0, flip: true });
-    const settle = seg(lt, 3, 4.4), [x, y] = arcPt([1500, -120], [TX + 40, -120], -60, easeOut(settle));
-    drop(x, y, 24 + 4 * seg(lt, 4, 6), t);
-    floretRain('s5fl', 900, 1600, -300, 1000, 30, t, { s: 8 });
-    camEnd();
-  } else {                                        // 55–58 三姨 smiles; the petals fall into pink
-    const z = kf(lt, [[9, 1], [12, 1.1]], ease);
-    camBegin(960, 330, z);
-    scene(1, 1);
-    moonWindow('s5w', 'sanyi', 'e0', 'e1', seg(lt, 9.6, 10.4), 1700, 90, 210, '#F3D9A4', t, { size: 1.85, bottom: 1.08 });
-    floretRain('s5fl2', 800, 1700, -300, 900, 20, t, { s: 9 });
-    if (lt > 11.2) wcBloom('s5pink', 1300, 400, 1200, '#EF6E96', seg(lt, 11.2, 12), { a: .08 });
-    camEnd();
-  }
-}
-
-// ═════════ 镜6 二姨 (58–72) · 桃粉 ═════════
-function scarfRiver(key, x0, y0, len, grow, t) {
-  const P = []; for (let i = 0; i <= 24; i++) { const k = i / 24; P.push([x0 + k * len, y0 + Math.sin(k * 5) * 40 + k * 180]); }
-  ctx.save(); ctx.beginPath(); ctx.rect(x0 - 50, -400, len * grow + 60, 2400); ctx.clip();
-  wc(key + 'rib', ribbonPts(P, 70, 150), '#EF4E86', { a: .1, spread: .12, edge: .35, mul: false });
-  for (let i = 0; i < 40; i++) { const k = hash(key, i), p = P[Math.floor(k * 24)]; wcAt(key + 'fl' + i, UNIT(8), ['#3657B0', '#F3C443', '#86CDB0'][i % 3], p[0] + (hash(key, i, 1) - .5) * 60, p[1] + (hash(key, i, 2) - .5) * 60 * (1 + k), 12 + hash(key, i, 3) * 14, { a: .12, mul: false, spread: .6 }); }
+// a wet front travelling down the paper: fn is only painted above it (screen space)
+function wetFront(key, y, fn) {
+  const P = []; for (let x = W + 40; x >= -40; x -= 40) P.push([x, y + (hash(key, x) * 2 - 1) * 26 + Math.sin(x * .007) * 30]);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.beginPath(); ctx.moveTo(-40, -40); ctx.lineTo(W + 40, -40); for (const p of P) ctx.lineTo(p[0], p[1]); ctx.closePath(); ctx.clip();
+  fn(); ctx.restore();
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'multiply'; ctx.lineJoin = 'round';
+  for (const [w, a] of [[10, .06], [3, .12]]) { ctx.strokeStyle = `rgba(200,140,80,${a})`; ctx.lineWidth = w; ctx.beginPath(); P.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); }
   ctx.restore();
-  return P;
 }
-function S6(lt, t) {
-  ambient(['#F2A0B8', .1], ['#FFE8EE', .14]);
-  const pink = ['#F6C9D6', '#F9DDE4', '#F4ECE8'];
-  if (lt < 3) {                                   // 58–61 二姨's phone lights with sixteen little circles; 热热 beside her
-    camBegin(960, 540, 1);
-    sky('s6sky', pink, { ground: '#E7C4C8', gy: 830 });
-    puppet('eryi', 'main', 760, 1010, 800, { t });
-    puppet('rere', 'main', 1250, 1010, 800, { t });
-    const a = seg(lt, .6, 1.2);
-    wcGlow(840, 640, 140, '#9FD3F0', .35 * a);
-    for (let i = 0; i < 16; i++) { const k = backOut(seg(lt, .9 + i * .08, 1.3 + i * .08)), an = -Math.PI * .9 + i / 15 * Math.PI * .8, r = 170; if (k > 0) wcCircle('s6dot' + i, 840 + Math.cos(an) * r, 600 + Math.sin(an) * r * .8, 12 * k, PICKUPS[i % PICKUPS.length][1], { mul: false, a: .2 }); }
-    drop(1560, 700, 24, t);
-    camEnd();
-  } else if (lt < 7) {                            // 61–65 the drop hops onto 热热's glasses: two little moons
-    const z = kf(lt, [[3, 1], [7, 1.08]], ease);
-    camBegin(960, 540, z);
-    sky('s6sky', pink, { ground: '#E7C4C8', gy: 830 });
-    wcAt('s6vig', UNIT(20), '#E9A8BE', 900, 600, 470, { a: .05, wet: true });
-    const im = spriteOf('rere', 'face'), fh = 720, fw = fh * im.width / im.height;
-    bust('rere', 'face', 'face', 0, 860, 1090, fh);
-    const up = seg(lt, 3.2, 4.2);
-    if (up < 1) { const [x, y] = arcPt([1500, 900], [860, 480], 260, easeOut(up)); drop(x, y, 20, t); }
-    else {
-      const a = seg(lt, 4.2, 4.6);
-      for (const s of [-1, 1]) { const lx = 860 + s * fw * GLASSES.rere[0], ly = 1090 - fh * GLASSES.rere[1]; wcGlow(lx, ly, 60, '#FFD27A', .3 * a); ctx.save(); ctx.globalAlpha = .8 * a; drop(lx, ly, 15, t + s, { glow: false }); ctx.restore(); }
-    }
-    camEnd();
-  } else if (lt < 11) {                           // 65–69 the end of 二姨's scarf floats over and settles round 热热's shoulders; he smiles
-    camBegin(960, 540, 1);
-    sky('s6sky', pink, { ground: '#E7C4C8', gy: 830 });
-    puppet('eryi', 'main', 760, 1010, 800, { t });
-    puppet('rere', 'main', 1250, 1010, 800, { t });
-    const d = ease(seg(lt, 7.2, 9));
-    ctx.save(); ctx.globalAlpha = .85;
-    wc('s6drape' + Math.round(d * 12), ribbonPts([[840, 470], [1000, 420 - (1 - d) * 160], [1150 + d * 20, 400 + d * 40], [1250, 440 + d * 20], [1340, 470 + d * 30]], 34, 46), '#EF4E86', { a: .1, spread: .12, mul: false });
-    ctx.restore();
-    moonWindow('s6w', 'rere', 'e0', 'e1', seg(lt, 9.3, 10), 1640, 300, 170 * backOut(seg(lt, 8.8, 9.4)), '#F6C9D6', t, { size: 1.9, bottom: 1.1 });
-    drop(1060, 300 + Math.sin(t * 2) * 10, 24, t);
-    camEnd();
-  } else {                                        // 69–72 push in on the drop: it darkens into a red button (match cut to 姥姥's jacket)
-    const z = kf(lt, [[11, 1], [14, 3]], easeIn);
-    camBegin(1060, 300, z);
-    sky('s6sky', pink, { ground: '#E7C4C8', gy: 830 });
-    puppet('eryi', 'main', 760, 1010, 800, { t });
-    puppet('rere', 'main', 1250, 1010, 800, { t });
-    const r = seg(lt, 12.4, 14);
-    if (r < 1) drop(1060, 300, 24, t, { glowA: .25 * (1 - r) });
-    wcCircle('s6btn', 1060, 300, 38 * r, '#5E1822', { mul: false, a: .25 * r });
-    camEnd();
+// circle reveal with a wet rim (ripples, keyholes): fn painted inside a wobbly circle, screen space
+function circleReveal(key, cx, cy, r, fn, rim = '#FFFFFF') {
+  if (r <= 0) return;
+  const P = ellPts(cx, cy, r, r, 60).map(([x, y], i) => [x + (hash(key, i) - .5) * r * .03, y + (hash(key, i, 1) - .5) * r * .03]);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.beginPath(); P.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.clip();
+  fn(); ctx.restore();
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  for (const [w, a] of [[16, .12], [4, .35]]) { ctx.strokeStyle = rgba(rim, a); ctx.lineWidth = w; ctx.beginPath(); P.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.stroke(); }
+  ctx.restore();
+}
+// ripple rings on water (x, y centre, squash sy), each ring born at t0s[i]
+function ripples(x, y, t, t0s, rMax, sy = .3, col = '#FFFFFF', a = .5, life = 1.6) {
+  ctx.save(); ctx.lineCap = 'round';
+  for (const t0 of t0s) for (let j = 0; j < 3; j++) {
+    const k = (t - t0 - j * .18) / life; if (k <= 0 || k >= 1) continue;
+    ctx.strokeStyle = rgba(col, a * (1 - k) * (1 - j * .25)); ctx.lineWidth = 2.5 * (1 - k) + .8;
+    ctx.beginPath(); ctx.ellipse(x, y, rMax * easeOut(k), rMax * easeOut(k) * sy, 0, 0, TAU); ctx.stroke();
   }
+  ctx.restore();
 }
-
-// ═════════ 镜7 姥姥 & 姥爷 (72–86) · 暗红 ═════════
-function lattice(x, y, w, h, cell, a, col = '#2A2A36') {
+// a soft polygon (for things that change shape every frame: wings, flags, legs)
+function poly(P, fill, a = 1, stroke, lw = 1) {
+  ctx.beginPath(); P.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath();
+  if (fill) { ctx.globalAlpha *= a; ctx.fillStyle = fill; ctx.fill(); ctx.globalAlpha /= a; }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.stroke(); }
+}
+function limb(P, w, col, a = 1) { ctx.save(); ctx.globalAlpha *= a; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); P.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); ctx.restore(); }
+// falling rain streaks (fixed per key), in the current space
+function rain(key, n, t, x0, x1, y0, y1, o = {}) {
+  const len = o.len ?? 60, sp = o.speed ?? 1.6, sl = o.slant ?? .18;
+  ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = rgba(o.col || '#F4F8FA', o.a ?? .35); ctx.lineWidth = o.w ?? 1.6; ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const ph = (hash(key, i) + t * sp * (.8 + hash(key, i, 1) * .4)) % 1, y = lerp(y0 - len, y1, ph), x = lerp(x0, x1, hash(key, i, 2)) - (y - y0) * sl;
+    ctx.moveTo(x, y); ctx.lineTo(x + len * sl, y + len);
+  }
+  ctx.stroke(); ctx.restore();
+}
+// a cloud of soft washes
+function cloudWC(key, x, y, s, col = '#FFFFFF', a = 1, mul = false) {
   ctx.save(); ctx.globalAlpha *= a;
-  for (let i = -8; i < 22; i++) {
-    wcStroke('lat1:' + i, [[x + i * cell, y], [x + i * cell + h, y + h]], 7, 5, col, { a: .1, layers: 5, spread: .15 });
-    wcStroke('lat2:' + i, [[x + i * cell + h, y], [x + i * cell, y + h]], 7, 5, col, { a: .1, layers: 5, spread: .15 });
-  }
+  for (let i = 0; i < 7; i++) { const u = i / 6 - .5; wcAt(key + i, UNIT(14), col, x + u * s * 2.2 + hash(key, i) * s * .2, y - (1 - 4 * u * u) * s * .22 + hash(key, i, 3) * s * .12, s * (.3 + .16 * hash(key, i, 1)), { sx: 1.9, sy: .6, mul, a: .055, spread: .8, wet: true, gran: .15 }); }
+  wcAt(key + 'base', UNIT(14), col, x, y + s * .08, s * 1.1, { sy: .16, mul, a: .05, spread: .7, wet: true, gran: 0 });
   ctx.restore();
 }
-function S7(lt, t) {
-  ambient(['#C98A86', .12], ['#FFD9B0', .16]);
-  const red = ['#C98A86', '#DDB2A8', '#EBD6C8'];
-  if (lt < 3) {                                   // 72–75 a button lifts off her jacket like a small moon
-    const z = kf(lt, [[0, 2.4], [3, 1.7]], ease);
-    camBegin(1150, 600, z);
-    sky('s7sky', red, { ground: '#C7A49A', gy: 860 });
-    puppet('laolao', 'main', 1150, 1060, 860, { t });
-    const k = seg(lt, .6, 2.6), [x, y] = arcPt([1152, 560], [1260, 330], 40, easeOut(k));
-    wcGlow(x, y, 50, '#FFD27A', .3 * k);
-    wcCircle('s7btn', x, y, 12 + 6 * k, '#5E1822', { mul: false, a: .25 });
-    camEnd();
-  } else if (lt < 11) {                           // 75–79 his quilted vest opens into a lattice window; 79–83 he turns to look at her
+function stars(key, n, x0, y0, w, h, t, a = 1) { for (let i = 0; i < n; i++) { const tw = .6 + .4 * Math.sin(t * (1 + hash(key, i, 4) * 2) + i); ctx.fillStyle = `rgba(255,244,210,${(.25 + hash(key, i) * .55) * tw * a})`; ctx.beginPath(); ctx.arc(x0 + hash(key, i, 1) * w, y0 + hash(key, i, 2) * h, .8 + hash(key, i, 3) * 1.8, 0, TAU); ctx.fill(); } }
+
+// ── the paper crane (the letter, folded): side view facing right; flap = wing phase (0 up, .5 down) ──
+function crane(x, y, s, flap = .25, o = {}) {
+  if (s < 1) return;
+  const w = o.fold ? .12 : Math.cos(flap * TAU);
+  ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0); ctx.scale((o.flip ? -1 : 1) * s / 100, s / 100);
+  if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
+  const ink = 'rgba(110,96,80,.8)', lw = 100 / s * 1.3;
+  if (o.shadow) { ctx.save(); ctx.globalAlpha *= .25; ctx.fillStyle = '#50466A'; ctx.beginPath(); ctx.ellipse(0, o.shadow, 60, 8, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+  const wet = o.wet || 0, paper = mix('#FBF6EA', '#D8D4CC', wet), paper2 = mix('#E6DCC8', '#BDB6AC', wet), shade = mix('#CBBFA8', '#A09A94', wet);
+  poly([[-26, -2], [20, -2], [-8 + 10 * w, -88 * w - 6]], shade, 1, ink, lw);            // far wing
+  poly([[-30, -1], [-80, -58], [-60, -54], [-20, 5]], paper2, 1, ink, lw);               // tail
+  poly([[22, 3], [68, -56], [58, -52], [30, -4]], paper2, 1, ink, lw);                   // neck
+  poly([[68, -56], [88, -46], [62, -50]], paper2, 1, ink, lw);                           // head
+  poly([[-42, 0], [0, -16], [42, 0], [0, 18]], paper, 1, ink, lw);                       // body
+  poly([[0, -16], [42, 0], [0, 18]], shade, .35);
+  poly([[-20, 2], [28, 2], [2 + 8 * w, -92 * w]], paper, 1, ink, lw);                    // near wing
+  // the envelope's red postcode boxes, still printed on the near wing
+  ctx.save(); ctx.globalAlpha *= .75; ctx.strokeStyle = '#C8392E'; ctx.lineWidth = lw * 1.1;
+  for (let i = 0; i < 3; i++) { const k = .25 + i * .16, bx = lerp(-10, 2 + 8 * w, k), by = lerp(0, -92 * w, k); ctx.strokeRect(bx - 5, by - 5, 10, 10); }
+  ctx.restore();
+  if (o.glow) glow(0, 0, 160, '#FFE2A0', o.glow);
+  ctx.restore();
+}
+// the letter: an envelope with the red postcode boxes and a stamp
+function letter(x, y, s, o = {}) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0); ctx.scale(s / 100 * (o.sx ?? 1), s / 100 * (o.sy ?? 1));
+  if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
+  poly([[-50, -32], [50, -32], [50, 32], [-50, 32]], '#FBF6EA', 1, 'rgba(110,96,80,.7)', 1.4);
+  ctx.strokeStyle = 'rgba(200,57,46,.8)'; ctx.lineWidth = 1.6; for (let i = 0; i < 6; i++) ctx.strokeRect(-44 + i * 10, -26, 8, 8);
+  poly([[30, -26], [44, -26], [44, -10], [30, -10]], o.stamp || '#5A8A6A', .8);
+  ctx.fillStyle = 'rgba(90,80,70,.35)'; for (let i = 0; i < 3; i++) ctx.fillRect(-20, 2 + i * 8, 44 - i * 10, 2);
+  ctx.restore();
+}
+
+// ── 向阳门第: four characters written stroke by stroke (no font), 0–100 grid; plaques read right to left ──
+const GLYPH = {
+  '向': [[[52, 2], [42, 16], 11, 5], [[20, 24], [20, 98], 10, 9], [[20, 24], [82, 24], [82, 90], [72, 98], 10, 9], [[38, 44], [38, 74], 9, 8], [[38, 44], [64, 44], [64, 74], 9, 8], [[38, 72], [64, 72], 8, 8]],
+  '阳': [[[14, 8], [32, 8], [22, 30], [34, 48], [22, 62], 9, 7], [[14, 8], [14, 98], 10, 8], [[46, 14], [46, 90], 9, 9, 'ri'], [[46, 14], [86, 14], [86, 90], 9, 9, 'ri'], [[46, 50], [86, 50], 8, 8, 'ri'], [[46, 88], [86, 88], 9, 9, 'ri']],
+  '门': [[[22, 4], [30, 16], 10, 7], [[16, 24], [16, 98], 10, 9], [[34, 18], [84, 18], [84, 92], [74, 99], 9, 9]],
+  '第': [[[24, 2], [10, 20], 9, 4], [[18, 10], [42, 10], 7, 7], [[28, 12], [32, 22], 7, 5], [[66, 2], [54, 20], 9, 4], [[60, 10], [88, 10], 7, 7], [[72, 12], [76, 22], 7, 5],
+    [[20, 34], [78, 34], [78, 54], 8, 8], [[22, 54], [78, 54], 8, 8], [[24, 54], [22, 72], [82, 72], [80, 94], [70, 90], 8, 8], [[50, 26], [50, 100], 9, 9], [[46, 72], [16, 96], 8, 3]],
+};
+// k: gold 0..1; o.only: 'ri' draws just the 日 of 阳; o.fade multiplies everything
+function glyph(key, ch, cx, cy, size, k, o = {}) {
+  const S = size / 100, X = p => [cx + (p[0] - 50) * S, cy + (p[1] - 50) * S];
+  GLYPH[ch].forEach((st, i) => {
+    const tag = typeof st[st.length - 1] === 'string' ? st[st.length - 1] : null, nums = st.filter(v => typeof v === 'number');
+    if (o.only && tag !== o.only) return;
+    const P = st.filter(v => Array.isArray(v)).map(X), w0 = nums[0] * S * 1.15, w1 = nums[1] * S * 1.15;
+    const a = (o.fade ?? 1) * (o.except && tag === o.except ? (o.exceptA ?? 1) : 1);
+    if (a <= 0) return;
+    for (let j = 0; j < P.length - 1; j++) {
+      const ww0 = lerp(w0, w1, j / (P.length - 1)), ww1 = lerp(w0, w1, (j + 1) / (P.length - 1)), sk = `${key}:${ch}:${i}:${j}`;
+      ctx.save(); ctx.globalAlpha *= a;
+      if (o.dim !== false) wcStroke(sk + 'd', [P[j], P[j + 1]], ww0, ww1, o.dimCol || '#7A5C34', { a: .16, mul: false, spread: .18, gran: .3 });
+      if (k > 0) { ctx.globalAlpha *= clamp(k); wcStroke(sk + 'g', [P[j], P[j + 1]], ww0, ww1, '#F2C24E', { a: .17, mul: false, spread: .14, gran: .2, edge: .35 }); }
+      ctx.restore();
+    }
+  });
+  if (k > 0 && o.glow !== false) wcGlow(cx, cy, size * .9, '#FFD27A', .18 * clamp(k) * (o.fade ?? 1));
+}
+const PLAQUE = { x: 706, y: 382, w: 508, h: 104, chars: [['向', 1150], ['阳', 1024], ['门', 897], ['第', 770]], cy: 434, size: 84 };
+function plaqueChars(key, gold, o = {}) { PLAQUE.chars.forEach(([ch, x], i) => glyph(key, ch, x, PLAQUE.cy, PLAQUE.size, typeof gold === 'function' ? gold(i) : gold, o)); }
+
+// ── the gate: grey brick gatehouse, tiled roof, plaque board, red doors (drawn live so they can open) ──
+function gateLayer() {
+  layer('gate', -400, -300, 2720, 1700, () => {
+    wcRect('g-grd', -400, 930, 2720, 480, '#B9A58A', { a: .07, spread: .25, wet: true });
+    for (const [x0, x1] of [[-400, 430], [1490, 2320]]) {                       // courtyard walls with tile caps
+      wcRect('g-wall' + x0, x0, 540, x1 - x0, 395, '#ADA7A3', { a: .08, spread: .1 });
+      wc('g-cap' + x0, [[x0, 492], [x1, 492], [x1 + (x0 < 0 ? 20 : 0), 548], [x0 - (x0 > 0 ? 20 : 0), 548]], '#4E5260', { a: .11, spread: .06 });
+      for (let x = x0; x < x1; x += 26) wcStroke('g-capt' + x0 + ':' + x, [[x, 500], [x + 4, 544]], 5, 5, '#3A3E4C', { a: .1, layers: 4 });
+    }
+    wcRect('g-pierL', 428, 330, 282, 600, '#A29D9A', { a: .09, spread: .08 });
+    wcRect('g-pierR', 1210, 330, 282, 600, '#A29D9A', { a: .09, spread: .08 });
+    ctx.save(); ctx.globalCompositeOperation = 'multiply';
+    for (let y = 560, r = 0; y < 930; y += 24, r++) {                           // brick courses
+      ctx.strokeStyle = 'rgba(120,112,108,.28)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-400, y); ctx.lineTo(430, y); ctx.moveTo(1490, y); ctx.lineTo(2320, y); ctx.stroke();
+      ctx.strokeStyle = 'rgba(120,112,108,.2)'; ctx.beginPath();
+      for (let x = -400 + (r % 2) * 26; x < 2320; x += 52) if (x < 430 || x > 1490 || (x > 428 && x < 710) || (x > 1210 && x < 1492)) { ctx.moveTo(x, y); ctx.lineTo(x, y + 24); }
+      ctx.stroke();
+    }
+    for (let y = 350, r = 0; y < 930; y += 24, r++) { ctx.strokeStyle = 'rgba(120,112,108,.26)'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(428, y); ctx.lineTo(710, y); ctx.moveTo(1210, y); ctx.lineTo(1492, y); ctx.stroke(); }
+    ctx.restore();
+    // roof with upturned corners, tile rows, ridge
+    wc('g-roof', [[470, 214], [1450, 214], [1500, 256], [1552, 318], [1590, 292], [1560, 350], [360, 350], [330, 292], [368, 318], [420, 256]], '#454A58', { a: .12, spread: .05, edge: .4 });
+    for (let x = 440; x <= 1480; x += 22) wcStroke('g-tile' + x, [[lerp(470, 1450, (x - 440) / 1040), 222], [x + (x - 960) * .1, 344]], 7, 9, '#2E3240', { a: .08, layers: 4 });
+    wcStroke('g-ridge', [[455, 212], [960, 208], [1465, 212]], 22, 22, '#2B2F3C', { a: .14 });
+    wcStroke('g-kissL', [[462, 212], [448, 176], [470, 168]], 16, 8, '#2B2F3C', { a: .14 });
+    wcStroke('g-kissR', [[1458, 212], [1472, 176], [1450, 168]], 16, 8, '#2B2F3C', { a: .14 });
+    // painted eave board (彩画) and lintel
+    wcRect('g-eave', 400, 350, 1120, 30, '#6A3A34', { a: .13, spread: .05 });
+    for (let i = 0; i < 12; i++) wcRect('g-cai' + i, 420 + i * 92, 355, 60, 20, i % 2 ? '#3E7C74' : '#2F5B8A', { a: .12, spread: .1 });
+    // the plaque board: gold frame, dark lacquer
+    wcRect('g-pframe', PLAQUE.x - 12, PLAQUE.y - 10, PLAQUE.w + 24, PLAQUE.h + 20, '#B98A3A', { a: .14, spread: .05, edge: .4 });
+    wcRect('g-plaque', PLAQUE.x, PLAQUE.y, PLAQUE.w, PLAQUE.h, '#26283A', { a: .2, spread: .04, mul: false });
+    // door frame, threshold, steps, stone drums
+    wcRect('g-postL', 690, 486, 24, 420, '#7A2E28', { a: .15, spread: .05 }); wcRect('g-postR', 1206, 486, 24, 420, '#7A2E28', { a: .15, spread: .05 });
+    wcRect('g-lintel', 690, 486, 540, 20, '#7A2E28', { a: .15, spread: .05 });
+    wcRect('g-sill', 700, 884, 520, 26, '#6A3A2E', { a: .15, spread: .05, edge: .4 });
+    wcRect('g-step1', 630, 910, 660, 30, '#CFC6B6', { a: .1, spread: .05, edge: .4 });
+    wcRect('g-step2', 570, 940, 780, 34, '#C4BBAA', { a: .1, spread: .05, edge: .4 });
+    for (const x of [650, 1270]) { wcAt('g-drum' + x, UNIT(18), '#BDB7AC', x, 832, 46, { a: .12, spread: .1, edge: .4 }); wcRect('g-drumb' + x, x - 44, 872, 88, 40, '#B0AA9E', { a: .12, spread: .06, edge: .4 }); }
+  });
+}
+// the doors: open 0..1 (swing inward), light = warm light from inside
+function gateDoors(open = 0, light = 0) {
+  const x0 = 712, x1 = 1208, y0 = 506, y1 = 884, mid = 960;
+  if (open > 0) {
+    ctx.save(); ctx.fillStyle = mix('#2A2030', '#F2B060', light * .6); ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    glow(mid, 760, 420, '#FFC070', .55 * light); ctx.restore();
+  }
+  const a = ease(open) * 1.25, sx = Math.max(.08, Math.cos(a));
+  for (const side of [-1, 1]) {
+    ctx.save(); ctx.translate(side < 0 ? x0 : x1, 0); ctx.scale(sx * (side < 0 ? 1 : -1), 1);
+    const w = mid - x0;
+    wcRect('g-door', 0, y0, w, y1 - y0, '#B8322C', { a: .15, spread: .03, edge: .4 });
+    wcRect('g-doorsh', 0, y0, w * .15, y1 - y0, '#6A1E1C', { a: .08, spread: .1, wet: true });
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 4; c++) { const x = 44 + c * 52, y = y0 + 52 + r * 58; ctx.fillStyle = '#C9983E'; ctx.beginPath(); ctx.arc(x, y, 8.5, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,240,190,.7)'; ctx.beginPath(); ctx.arc(x - 2.5, y - 2.5, 3, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#B58436'; ctx.beginPath(); ctx.arc(w - 40, 700, 18, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#A57A34'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(w - 40, 736, 26, 0, TAU); ctx.stroke();
+    ctx.restore();
+  }
+  if (open <= 0) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(60,20,20,.55)'; ctx.fillRect(mid - 2, y0, 4, y1 - y0); ctx.restore(); }
+}
+// the gate at night: the same painting, glazed with blue, the moon's light raking across
+function nightGlaze(a = .6) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgba('#3A4288', a); ctx.fillRect(-600, -600, 3200, 2400); ctx.restore(); }
+
+// ═════════ 镜1 向阳门第·晨 (0–14) ═════════
+const dawnSky = () => bandsL('dawn', -400, -600, 2720, 1500, ['#F4C99A', '#F7DDBA', '#F8EBD6', '#F7F0E4'], .07);
+function gateMorning(lt, gold) {
+  dawnSky();
+  wcGlow(1700, 120, 700, '#FFD9A0', .35);
+  cloudWC('g-cl1', 380, 120, 220, '#FFF6E6', .9); cloudWC('g-cl2', 1560, 60, 260, '#FFF1DE', .8);
+  gateLayer(); gateDoors(0);
+  plaqueChars('pl', gold);
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(250,210,160,.16)'; ctx.fillRect(-600, -600, 3200, 2400); ctx.restore();
+}
+// the sunbeam: a soft slanted band crossing from the right (world x of its centre)
+function sunbeam(x, a = 1) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createLinearGradient(x - 220, 0, x + 220, 0);
+  g.addColorStop(0, 'rgba(255,220,150,0)'); g.addColorStop(.5, `rgba(255,220,150,${.28 * a})`); g.addColorStop(1, 'rgba(255,220,150,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 220 + 300, -300); ctx.lineTo(x + 220 + 300, -300); ctx.lineTo(x + 220 - 500, 1300); ctx.lineTo(x - 220 - 500, 1300); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+const LIGHT_AT = [4.5, 6.6, 7.4, 8.2];            // 向 阳 门 第 turn gold (s)
+function S1(lt, t) {
+  const gold = i => ease(seg(lt, LIGHT_AT[i], LIGHT_AT[i] + .6));
+  if (lt < 3) {                                   // 0–3 the dawn wash runs down the paper
     camBegin(960, 540, 1);
-    sky('s7sky', red, { ground: '#C7A49A', gy: 860 });
-    const open = ease(seg(lt, 3.4, 5.6));
-    ctx.save(); ctx.beginPath(); ctx.arc(960, 430, 700 * open + 1, 0, TAU); ctx.clip();
-    wcRect('s7win', 0, -100, W, 1000, '#E8C9A0', { a: .07, wet: true });
-    wcGlow(960, 400, 700, '#FFD9A0', .35);
-    lattice(-400, -100, 2700, 1000, 170, .8);
+    camEnd();
+    wetFront('s1front', lerp(-80, 1180, easeIO(seg(lt, .2, 3))), () => { camBegin(960, 540, 1); gateMorning(lt, 0); camEnd(); });
+  } else if (lt < 9) {                            // 3–9 push in; the sunbeam crosses and the characters turn gold one by one
+    const z = kf(lt, [[3, 1], [9, 1.55]], easeIO), cy = lerp(540, 470, seg(z, 1, 1.55));
+    camBegin(960, cy, z);
+    gateMorning(lt, gold);
+    sunbeam(lerp(1900, 500, seg(lt, 3.4, 8.8)), Math.sin(seg(lt, 3.4, 8.8) * Math.PI));
+    camEnd();
+  } else if (lt < 11.5) {                         // 9–11.5 tilt down to the threshold: the letter slides out under the door
+    const cy = kf(lt, [[9, 660], [11.5, 830]], easeIO);
+    camBegin(960, cy, 1.9);
+    gateMorning(lt, 1);
+    const k = ease(seg(lt, 9.8, 11.3));
+    ctx.save(); ctx.beginPath(); ctx.rect(600, 895, 800, 200); ctx.clip();
+    letter(960 + k * 10, lerp(870, 936, k), 70, { sy: .5, rot: .03 * k });
     ctx.restore();
-    const k = seg(lt, 4.6, 7), [x, y] = arcPt([960, -80], [960, 360], -40, easeOut(k));
-    drop(x, y, 26, t);
-    puppet('laoye', lt > 7.3 ? 'side' : 'front', 760, 1030, 820, { t });
-    puppet('laolao', 'front', 1180, 1030, 820, { t });
     camEnd();
-  } else {                                        // 83–86 push into the lattice: steam
-    const z = kf(lt, [[11, 1], [14, 2.2]], easeIn);
-    camBegin(960, 400, z);
-    sky('s7sky', red, { ground: '#C7A49A', gy: 860 });
-    wcRect('s7win', 0, -100, W, 1000, '#E8C9A0', { a: .07, wet: true });
-    lattice(-400, -100, 2700, 1000, 170, .8);
-    puppet('laoye', 'side', 760, 1030, 820, { t });
-    puppet('laolao', 'front', 1180, 1030, 820, { t });
-    drop(960, 360, 26, t);
-    for (let i = 0; i < 8; i++) wcBloom('s7st' + i, 700 + i * 70, 420 - seg(lt, 11 + i * .1, 14) * 200, 120 + i * 20, '#FFFFFF', seg(lt, 11.5 + i * .12, 13.6), { a: .12, mul: false });
-    camEnd();
-    paperCover(seg(lt, 13.4, 14) * .8);
-  }
-}
-
-// ═════════ 镜8 云里的厨房 (86–106) · 蒸汽白 ═════════
-function cloudPuff(key, x, y, s, col = '#FFFFFF', a = 1) { ctx.save(); ctx.globalAlpha *= a; for (let i = 0; i < 5; i++) wcAt(key + i, UNIT(12), col, x + (i - 2) * s * .45, y - Math.sin(i / 4 * Math.PI) * s * .35, s * (.45 + .1 * (i % 2)), { mul: false, a: .12, spread: .5, edge: .15 }); ctx.restore(); }
-function kitchenBG() {
-  layer('s8bg', -200, -200, 4400, 1480, () => {
-    wcBands('s8sky', -200, -200, 4400, 1100, ['#DCE4EE', '#EEF0F2', '#F5EFE6'], { a: .06 });
-    wcRect('s8floor', -200, 880, 4400, 500, '#D8C6A8', { a: .07, spread: .2 });
-    wcRect('s8counter', -200, 860, 4400, 60, '#B98A5E', { a: .08, spread: .1 });
-    for (let i = 0; i < 16; i++) cloudPuff('s8c' + i, -100 + i * 290, 1000 + (i % 3) * 30, 180);
-  });
-}
-function S8(lt, t) {
-  ambient(['#C8D4E4', .07], ['#FFF4E0', .12]);
-  const Y = 1000, H0 = 740;
-  if (lt < 3) {                                   // 86–89 steam parts: a steamer, a kitchen afloat on clouds
-    const z = kf(lt, [[0, 1.5], [3, 1]], ease);
-    camBegin(960, 560, z);
-    kitchenBG();
-    steamer('s8st', 960, 860, 230, seg(lt, .3, 1.4));
-    for (let i = 0; i < 6; i++) cloudPuff('s8puff' + i, 960 + (i - 2.5) * 80, 600 - (lt * 60 + i * 60) % 400, 140, '#FFFFFF', 1 - seg(lt, 1, 3) * .6);
-    drop(960, 420, 26, t);
-    camEnd();
-  } else if (lt < 11) {                           // 89–93 pan: a bowl floats daju → baba → mama; 93–97 the biggest bowl goes back and forth
-    const cx = lt < 7 ? kf(lt, [[3, 700], [7, 1250]], easeIO) : 1250;
-    camBegin(cx, 540, 1);
-    kitchenBG();
-    puppet('daju', 'front', 520, Y, H0, { t });
-    puppet('baba', 'front', 980, Y, H0, { t });
-    puppet('mama', 'front', 1440, Y, H0, { t });
-    const k = seg(lt, 3.6, 6.8), bx = lerp(560, 1400, easeIO(k)), by = 600 - Math.sin(k * Math.PI * 2) * 30;
-    bowlWC('s8b1', bx, by, 44);
-    const push = lt < 7 ? 0 : lt < 8.6 ? ease(seg(lt, 7, 8.4)) : 1 - ease(seg(lt, 8.8, 10.4));
-    bowlWC('s8big', lerp(1060, 1360, push), 800, 78);
-    drop(1210, 430 + Math.sin(t * 2) * 12, 26, t);
-    camEnd();
-  } else if (lt < 18) {                           // 97–101 pan: beads roll, a pomelo, the drop pressed into a mould; 101–104 back to back
-    const cx = lt < 15 ? kf(lt, [[11, 2200], [15, 2900]], easeIO) : 2900;
-    camBegin(cx, 540, 1);
-    kitchenBG();
-    puppet('sanyifu', 'front', 2050, Y, H0, { t });
-    puppet('sanyi', 'front', 2420, Y, H0, { t });
-    puppet('erjiu', 'front', 3060, Y, H0, { t });
-    puppet('erjiumu', 'front', 3300, Y, H0, { t });
-    for (let i = 0; i < 10; i++) { const k = seg(lt, 11 + i * .12, 14 + i * .12), x = lerp(1700, 2600 - i * 26, easeOut(k)); if (k > 0) { wcGlow(x, 848, 24, '#FFB24A', .3); wcCircle('s8bead' + i, x, 848, 11, '#EB8E2C', { mul: false, a: .22 }); } }
-    pomelo('s8pom', 2240, 840, 46);
-    const press = seg(lt, 12.8, 13.6), lift = seg(lt, 13.9, 14.6), pressed = lt > 13.6;
-    if (!pressed) drop(2700, lerp(430, 810, easeIn(seg(lt, 11.6, 12.9))), 24, t);
-    mooncakeWC('s8mc', 2700, 840, 60, .45, { glow: pressed ? .8 : 0 });
-    const my = lerp(560, 790, easeIn(press)) - lift * 220;
-    wc('s8mould', [[2640, my - 70], [2760, my - 70], [2770, my + 10], [2630, my + 10]], '#9C6A45', { a: .12, spread: .1, edge: .4 });
-    wcStroke('s8handle', [[2700, my - 70], [2700, my - 220]], 22, 18, '#8A5A3C', { a: .14 });
-    camEnd();
-  } else {                                        // 104–106 tilt up: the clouds rise and go orange
-    const cy = kf(lt, [[18, 540], [20, -300]], easeIO);
-    camBegin(2900, cy, 1);
-    kitchenBG();
-    ctx.save(); ctx.globalAlpha = seg(lt, 18.2, 20);
-    wcBands('s8dusk', 1800, -900, 2200, 900, ['#E9895A', '#F1A77A', '#F6C9A0'], { a: .08 });
-    ctx.restore();
-    for (let i = 0; i < 6; i++) cloudPuff('s8up' + i, 2500 + i * 160, 200 - (lt - 18) * 260 - i * 40, 160, mix('#FFFFFF', '#F4A06A', seg(lt, 18.4, 20)));
+  } else {                                        // 11.5–14 it folds itself into a crane and flies up into the clouds (tilt up)
+    const cy = kf(lt, [[12, 830], [14, 150]], easeIO);
+    camBegin(960, cy, 1.9);
+    gateMorning(lt, 1);
+    const f = seg(lt, 11.5, 12.3), fly = seg(lt, 12.3, 14);
+    if (f < .5) letter(970, 936, 70, { sy: .5 * (1 - ease(f * 2) * .9), sx: 1 - f * .4, rot: .03 });
+    else {
+      const [x, y] = arcPt([970, 925], [1120, 100], 80, easeIn(fly) * .7 + fly * .3);
+      crane(x, y, lerp(30, 70, ease(seg(f, .5, 1))), lt * 2.4, { rot: -.25 * fly });
+      if (f < 1) spatter('s1fold', 970, 930, 60, 14, '#F2C24E', { size: 2.4, a: .5 * (1 - f), mul: false });
+    }
+    cloudWC('s1cl', 1000, 120, 300, '#FFFFFF', seg(lt, 13, 14));
     camEnd();
   }
 }
 
-// ═════════ 镜9 黄昏的路 (106–124) · 橙紫 ═════════
-const WALK = ['mama', 'baba', 'lulu', 'wo', 'daju', 'doudou', 'erjiu', 'erjiumu', 'daidai', 'sanyi', 'tongtong', 'eryi', 'rere'];
-const ROUNDS = ['bowl', 'teapot', 'cake', 'lantern', 'bead', 'lantern', 'pomelo', 'cake', 'bowl', 'cake', 'pomelo', 'rlantern', 'rlantern'];
-function roundThing(kind, x, y, s, t, i) {
-  const k = 'rt' + i;
-  if (kind === 'bowl') bowlWC(k, x, y, s * .8);
-  if (kind === 'cake') mooncakeWC(k, x, y, s * .8, .5);
-  if (kind === 'pomelo') pomelo(k, x, y, s * .7);
-  if (kind === 'teapot') teapotWC(k, x, y, s * .6);
-  if (kind === 'lantern') lanternWC(x, y, s * .7, .6, Math.sin(t * 2 + i) * .08, k + 'l');
-  if (kind === 'rlantern') rabbitLanternWC(x, y + s * .5, s * .9, .5, t, k);
-  if (kind === 'button') wcCircle(k, x, y, s * .35, '#5E1822', { mul: false, a: .25 });
-  if (kind === 'bead') wcCircle(k, x, y, s * .35, '#EB8E2C', { mul: false, a: .25 });
+// ═════════ 镜2 北京 · 秋天的蓝 (14–32) ═════════
+const bjSky = () => bandsL('bjsky', -600, -500, 4600, 2000, ['#7FA6D6', '#9CBBE0', '#BCD2EA', '#DCE7F0'], .075);
+// a pigeon: grey, dark head, flapping (phase), facing right
+function pigeon(x, y, s, phase, o = {}) {
+  const w = Math.cos(phase * TAU);
+  ctx.save(); ctx.translate(x, y); ctx.scale((o.flip ? -1 : 1) * s / 40, s / 40); if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
+  const g = o.col || '#7E8494';
+  if (!o.perch) poly([[-6, -2], [10, -2], [-2 + 4 * w, -26 * w]], mix(g, '#FFFFFF', .2), .9);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 16, 7, -.1, 0, TAU); ctx.fill();
+  poly([[-14, 0], [-26, -4], [-26, 5]], mix(g, '#2A2A36', .3), .9);
+  ctx.fillStyle = mix(g, '#2A2E40', .45); ctx.beginPath(); ctx.arc(14, -5, 5.5, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#C9A040'; ctx.beginPath(); ctx.moveTo(19, -5); ctx.lineTo(23, -4); ctx.lineTo(19, -3); ctx.fill();
+  if (o.perch) { poly([[-10, -3], [8, -3], [-6, 3]], mix(g, '#FFFFFF', .15), 1); limb([[-2, 6], [-2, 12]], 1.6, '#B0605A'); limb([[3, 6], [3, 12]], 1.6, '#B0605A'); }
+  else poly([[-4, -1], [12, -1], [2 + 4 * w, -30 * w]], mix(g, '#FFFFFF', .35), 1);
+  ctx.restore();
 }
-function duskBG() {
-  layer('s9bg', -2600, -300, 9600, 1700, () => {
-    wcBands('s9sky', -2600, -300, 9600, 1100, ['#7C6FA8', '#C98AA0', '#F2A77A', '#F8CFA0'], { a: .065 });
-    for (let i = 0; i < 16; i++) { const x = i * 620 - 2400; wc('s9hill' + i, [[x - 500, 1400], [x - 300, 860 - hash('h', i) * 80], [x, 800 - hash('h', i, 1) * 120], [x + 300, 870], [x + 520, 1400]], i % 2 ? '#8C6F9C' : '#A07AA0', { a: .06, spread: .3 }); }
-    wcRect('s9road', -2600, 960, 9600, 400, '#C8A08A', { a: .06, spread: .2, wet: true });
-  });
+// hutong roofs: three receding rows of grey tiled roofs, and one near ridge the pigeons land on
+const ROOFS = [];
+for (let r = 0; r < 3; r++) for (let i = 0; i < 10; i++) {
+  const w = 330 + hash('rf', r, i) * 160, x = -560 + i * 310 + (r % 2) * 150 + hash('rf', r, i + 9) * 40, y = 610 + r * 90, h = 44 + r * 14;
+  ROOFS.push({ r, x, y, w, h });
 }
-function S9(lt, t) {
-  const walkX = (i, l = lt) => 1400 + l * 150 - i * 260;       // everyone walks right at the same pace
-  const dusk = ['#6A4A8A', .12];
-  if (lt < 12) {                                  // 106–118 one long pan along the procession
-    const cx = lerp(300, 2500, easeIO(seg(lt, 0, 12)));
-    camBegin(cx, 540, 1);
-    duskBG();
-    rabbit(walkX(-1.2), 1000, 44, t, { hop: (t * 2.4) % 1 });
-    WALK.forEach((r, i) => { const x = walkX(i); puppet(r, 'side', x, 1000, 640, { t, walk: lt * 1.1 + i * .37, tint: dusk }); roundThing(ROUNDS[i], x + 10, 300 + Math.sin(t * 1.5 + i) * 12, 95, t, i); });
-    const c3 = walkX(10.6);          // 三姨夫 rides a little cloud behind 三姨 and 桐桐
-    cloudPuff('s9ride3', c3, 1010, 150, '#F4E9E2');
-    puppet('sanyifu', 'side', c3, 980, 640, { t, dy: Math.sin(t * 1.4 + 2) * 6, shadow: false, tint: dusk });
-    const cxl = walkX(13.6);          // 姥姥 and 姥爷 ride a cloud at the back
-    cloudPuff('s9ride', cxl, 1010, 200, '#F4E9E2');
-    puppet('laoye', 'side', cxl - 90, 980, 640, { t, dy: Math.sin(t * 1.4) * 6, shadow: false, tint: dusk });
-    puppet('laolao', 'side', cxl + 110, 1000, 640, { t, dy: Math.sin(t * 1.4 + 1) * 6, shadow: false, tint: dusk });
-    drop(walkX(5) + 80, 180 + Math.sin(t) * 16, lerp(40, 90, seg(lt, 6, 12)), t);
-    camEnd();
-  } else if (lt < 15) {                           // 118–121 rere, at the back, stops and looks back to wait
-    const stopX = walkX(12, 12.4);
-    camBegin(stopX - 300, 540, 1);
-    duskBG();
-    const waiting = lt > 12.4;
-    puppet('rere', 'side', waiting ? stopX : walkX(12), 1000, 640, { t, flip: lt > 13, walk: waiting ? undefined : lt * 1.1, tint: dusk });
-    const cx2 = stopX - 820 + (lt - 12) * 110;           // grandpa's cloud drifts up to him
-    cloudPuff('s9ride', cx2, 1010, 200, '#F4E9E2');
-    puppet('laoye', 'side', cx2 - 90, 980, 640, { t, dy: Math.sin(t * 1.4) * 6, shadow: false, tint: dusk });
-    puppet('laolao', 'side', cx2 + 110, 1000, 640, { t, dy: Math.sin(t * 1.4 + 1) * 6, shadow: false, tint: dusk });
-    camEnd();
-  } else {                                        // 121–124 tilt up: the round things light up as lanterns
-    const cy = kf(lt, [[15, 540], [18, 60]], easeIO);
-    camBegin(2300, cy, 1);
-    duskBG();
-    ctx.save(); ctx.globalAlpha = seg(lt, 15, 17.5); wcBands('s9night', 1000, -700, 2800, 900, ['#1F2652', '#2E3A73', '#5E5A8E'], { a: .09 }); ctx.restore();
-    WALK.concat(['laolao']).forEach((r, i) => { const x = 2600 - i * 170; lanternWC(x, 200 - (i % 3) * 90 - seg(lt, 15, 18) * 120, 34, seg(lt, 15.5 + i * .12, 16.2 + i * .12), Math.sin(t * 2 + i) * .08, 's9l' + i); });
-    camEnd();
-  }
+const RIDGE = { x0: 560, x1: 1380, y: 850 };       // the near ridge the pigeons land on
+function whiteDagoba(key, x, y, s, col = '#F4F1EA') {
+  const sh = '#AFAEC0', O = { a: .14, spread: .05, edge: .35, mul: false };
+  wcRect(key + 'b', x - s * .38, y - s * .2, s * .76, s * .2, col, O);
+  wcRect(key + 'b2', x - s * .28, y - s * .3, s * .56, s * .1, col, O);
+  wcAt(key + 'bulb', UNIT(22), col, x, y - s * .47, s * .25, { ...O, sy: 1.05 });
+  wcAt(key + 'bsh', UNIT(16), sh, x + s * .1, y - s * .45, s * .16, { sy: 1.4, a: .08, wet: true });
+  wcRect(key + 'door', x - s * .05, y - s * .5, s * .1, s * .1, '#A83A2E', { a: .14, spread: .1 });
+  wc(key + 'sp', [[x - s * .07, y - s * .7], [x + s * .07, y - s * .7], [x + s * .035, y - s * .9], [x - s * .035, y - s * .9]], col, O);
+  wcRect(key + 'bsh2', x + s * .12, y - s * .3, s * .26, s * .3, sh, { a: .06, wet: true });
+  for (let i = 0; i < 6; i++) { const yy = y - s * (.72 + i * .03); limb([[x - s * (.07 - i * .006), yy], [x + s * (.07 - i * .006), yy]], 1.2, 'rgba(140,138,160,.6)'); }
+  wcAt(key + 'can', UNIT(16), '#C9A040', x, y - s * .92, s * .09, { sy: .3, a: .15, spread: .1 });
+  wcAt(key + 'fin', UNIT(10), '#D9AE48', x, y - s * .97, s * .025, { sy: 1.6, a: .18 });
 }
-
-// ═════════ 镜10 圆桌 (124–148) · 夜靛与灯金 ═════════
-const TABLE_ROW = ['sanyi', 'sanyifu', 'daju', 'mama', 'baba', 'laolao', 'laoye', 'erjiu', 'erjiumu', 'eryi'];
-const TABLE_FRONT = ['tongtong', 'doudou', 'wo', 'lulu', 'daidai', 'rere'];
-function courtyardNight() {
-  layer('s10bg', -200, -1000, 2320, 2380, () => {
-    wcBands('s10sky', -200, -1000, 2320, 1600, ['#1B2250', '#27306A', '#3A4580'], { a: .1 });
-    for (let i = 0; i < 60; i++) { ctx.fillStyle = `rgba(255,240,200,${.3 + hash('st', i) * .5})`; ctx.beginPath(); ctx.arc(hash('st', i, 1) * 2300 - 200, hash('st', i, 2) * 1200 - 950, 1 + hash('st', i, 3) * 2, 0, TAU); ctx.fill(); }
-    wc('s10roof', [[-200, 480], [400, 380], [1500, 380], [2100, 480], [2100, 560], [-200, 560]], '#1C2040', { a: .1, spread: .1 });
-    wcRect('s10wall', -200, 540, 2320, 360, '#6A5A70', { a: .07, spread: .15 });
-    wcRect('s10floor', -200, 880, 2320, 600, '#5A5070', { a: .08, spread: .2, wet: true });
-  });
-}
-function tableWC(y, t, o = {}) {
-  ctx.save(); ctx.fillStyle = '#6A4A3A'; ctx.beginPath(); ctx.moveTo(240, y); ctx.lineTo(1680, y); ctx.lineTo(1700, y + 240); ctx.lineTo(220, y + 240); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#9C6E4E'; ctx.beginPath(); ctx.ellipse(960, y, 720, 108, 0, 0, TAU); ctx.fill(); ctx.restore();
-  wc('s10cloth', [[240, y], [1680, y], [1700, y + 240], [220, y + 240]], '#8A5A3C', { a: .1, spread: .08 });
-  wcAt('s10tabletop', UNIT(30), '#C99466', 960, y, 720, { sy: .15, a: .1, spread: .08, edge: .45 });
-  wcAt('s10runner', UNIT(24), '#C63B33', 960, y, 420, { sy: .09, a: .1, spread: .1 });
-  mooncakeWC('s10mc', 960, y - 14, 90, .35, { glow: o.glow || 0 });
-  pomelo('s10pom', 700, y - 30, 40); pomelo('s10pom2', 1260, y - 26, 34);
-  for (let i = 0; i < 8; i++) cupWC('s10cup' + i, 380 + i * 165, y + 20 + (i % 2) * 14, 22, o.tea ? seg(o.tea, i * .3, i * .3 + .3) : 0);
-}
-function S10(lt, t) {
-  const Y = 880;
-  const drawTable = (o = {}) => {
-    courtyardNight();
-    for (let i = 0; i < 7; i++) { const k = seg(lt, i * .35, 2.4 + i * .35); lanternWC(360 + i * 200, lerp(-200, 160 + (i % 2) * 40, easeOut(k)), 38, 1, Math.sin(t * 1.5 + i) * .05, 's10l' + i); }
-    const seat = o.seat ?? 1;
-    // the far side of the table: everyone standing behind it, cut at the waist by the tabletop
-    TABLE_ROW.forEach((r, i) => { const a = seg(seat, i * .08, i * .08 + .3); if (a > 0) puppet(r, 'front', 300 + i * 147, Y + 140 - (1 - a) * 30, 600, { t, alpha: a, tint: ['#FFB070', .08], shadow: false }); });
-    tableWC(Y, t, o);
-    // the near side: the young ones, seen from behind, on stools
-    TABLE_FRONT.forEach((r, i) => { const a = seg(seat, .6 + i * .06, .9 + i * .06); if (a > 0) puppet(r, 'back', 380 + i * 232, 1320 + (1 - a) * 40, 640, { t, alpha: a, tint: ['#1F2652', .25], shadow: false }); });
-  };
-  if (lt < 4) { camBegin(960, 540, 1); drawTable({ seat: 0 }); camEnd(); }
-  else if (lt < 8) { const z = kf(lt, [[4, 1], [8, 1.1]], ease); camBegin(960, 560, z); drawTable({ seat: seg(lt, 4, 7.5) }); camEnd(); }
-  else if (lt < 12) {                             // 132–136 the teapot pours, grandpa's cup first
-    camBegin(960, 620, 1.35);
-    drawTable({ tea: lt - 8.5 });
-    const k = seg(lt, 8.2, 12), x = lerp(1010, 1320, k);
-    teapotWC('s10pot', x, 700 + Math.sin(k * 20) * 6, 44, -.4 * Math.sin(k * Math.PI * 4) ** 2);
-    camEnd();
-  } else if (lt < 16) {                           // 136–140 a pan along round windows: one smile after another
-    const cx = kf(lt, [[12, 500], [16, 3100]], easeIO);
-    camBegin(cx, 540, 1);
-    layer('s10strip', -200, -200, 4000, 1480, () => wcBands('s10strip', -200, -200, 4000, 1480, ['#1B2250', '#27306A', '#1B2250'], { a: .1 }));
-    const ALL = ['laoye', 'laolao', 'mama', 'baba', 'wo', 'lulu', 'daju', 'doudou', 'erjiu', 'erjiumu', 'daidai', 'sanyi', 'sanyifu', 'tongtong', 'eryi', 'rere'];
-    ALL.forEach((r, i) => { const x = 300 + i * 190, tt = 12 + (x - 300) / 2800 * 4; moonWindow('s10w' + i, r, 'e0', 'e1', seg(lt, tt, tt + .5), x, 540 + (i % 2 ? -110 : 110), 120, '#F2C877', t, { size: 1.75, bottom: 1.1 }); });
-    camEnd();
-  } else if (lt < 20) {                           // 140–144 the drop falls into the big mooncake; it glows
-    const z = kf(lt, [[16, 1.1], [20, 1.6]], ease);
-    camBegin(960, 800, z);
-    const g = seg(lt, 17.6, 18.4);
-    drawTable({ glow: g, tea: 10 });
-    if (g < 1) drop(960, lerp(-100, Y - 20, easeIn(seg(lt, 16.2, 17.6))), 30, t, { glowA: .3 });
-    camEnd();
-  } else {                                        // 144–148 everyone looks up: tilt up to the sky
-    const cy = kf(lt, [[20, 560], [24, -200]], easeIO);
-    camBegin(960, cy, 1);
-    drawTable({ glow: 1, tea: 10 });
-    camEnd();
-  }
-}
-
-// ═════════ 镜11 全家福 (148–168) · 满月金 ═════════
-const PHOTO = [
-  ['sanyifu', 180, 900], ['sanyi', 380, 940], ['erjiu', 560, 930], ['erjiumu', 760, 950], ['laoye', 960, 900], ['laolao', 1180, 920],
-  ['mama', 1400, 930], ['baba', 1640, 930], ['daju', 1840, 900],
-  ['tongtong', 440, 780], ['daidai', 640, 800], ['eryi', 860, 780], ['rere', 1080, 770], ['lulu', 1300, 790], ['wo', 1500, 800], ['doudou', 1700, 790],
-];
-function S11(lt, t) {
-  const warm = ['#FFB070', .06];
-  const group = (squeezeK, woK) => {
-    [...PHOTO].sort((a, b) => a[2] - b[2]).forEach(([r, x, y], i) => {
-      if (r === 'wo') {
-        if (woK <= 0) return;
-        const done = woK >= 1, xx = lerp(2300, x, easeOut(woK));
-        puppet(r, done ? 'main' : 'side', xx, y + 120, 520, { t, flip: !done, walk: done ? undefined : lt * 2.5, tint: warm });
-        return;
-      }
-      const sq = ease(clamp(squeezeK * 1.3 - i * .02)), dx = (x - 960) * .14 * (1 - sq);
-      puppet(r, 'main', x + dx, y + 120, 520, { t, tint: warm });
+function roofsLayer() {
+  layer('bjroofs', -600, 200, 3200, 1100, () => {
+    wc('bjhill', [[-400, 640], [-100, 520], [300, 470], [620, 540], [900, 640]], '#7E9A7A', { a: .07, spread: .3, wet: true });
+    whiteDagoba('bjdag', 250, 560, 420, '#F3F0EA');
+    wcRect('bjband', -600, 575, 3200, 700, '#C9C8CC', { a: .15, spread: .02, mul: false });
+    ROOFS.forEach((f, j) => {
+      const c = mix('#B4B7C2', '#8A8E9C', f.r / 2), dk = mix(c, '#30323C', .3);
+      if (f.r === 0 && j % 3 === 1) wcAt('bjgk' + j, UNIT(12), '#E2B84A', f.x + f.w * .5, f.y - f.h - 40, 80, { sy: .8, a: .07, spread: .6, wet: true });
+      wcRect('bjwall' + j, f.x + 20, f.y - 4, f.w - 40, 120, mix('#D8D4D0', '#B4B0B2', f.r / 2), { a: .15, spread: .04, mul: false });
+      wc('bjroof' + j, [[f.x + 30, f.y - f.h], [f.x + f.w - 30, f.y - f.h], [f.x + f.w + 10, f.y], [f.x - 10, f.y]], c, { a: .15, spread: .03, edge: .3, mul: false });
+      ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = rgba(dk, .3); ctx.lineWidth = 2.5; ctx.beginPath();
+      for (let x = f.x + 8; x < f.x + f.w - 8; x += 14) { ctx.moveTo(lerp(f.x + 30, f.x + f.w - 30, (x - f.x) / f.w), f.y - f.h + 4); ctx.lineTo(x, f.y - 2); }
+      ctx.stroke(); ctx.restore();
+      wcStroke('bjridge' + j, [[f.x + 22, f.y - f.h], [f.x + f.w - 22, f.y - f.h]], 8 + f.r * 2, 8 + f.r * 2, dk, { a: .12 });
     });
+    // the near roof, seen from just above its ridge
+    wc('bjnear', [[-600, RIDGE.y], [2600, RIDGE.y], [2600, 1300], [-600, 1300]], '#9EA2B0', { a: .16, spread: .02, mul: false });
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = 'rgba(80,84,100,.25)'; ctx.lineWidth = 8; ctx.beginPath();
+    for (let x = -600; x < 2600; x += 30) { ctx.moveTo(x, RIDGE.y + 14); ctx.lineTo(x + (x - 960) * .25, 1300); }
+    ctx.stroke(); ctx.restore();
+    wcStroke('bjnearR', [[-600, RIDGE.y], [2600, RIDGE.y]], 22, 22, '#5A5E6C', { a: .12 });
+  });
+}
+function persimmonTree(key, t, ripe) {
+  layer(key + 'bg', -400, -300, 2720, 1700, () => {
+    wcBands(key + 'sky', -400, -300, 2720, 1100, ['#7FA6D6', '#A6C2E3', '#CFDDEB'], { a: .075 });
+    wcRect(key + 'wall', -400, 700, 2720, 700, '#A9A7AA', { a: .09, spread: .08 });
+    wc(key + 'cap', [[-400, 640], [2320, 640], [2320, 712], [-400, 712]], '#4E5260', { a: .12, spread: .05 });
+    for (let x = -400; x < 2320; x += 26) wcStroke(key + 'ct' + x, [[x, 646], [x + 3, 708]], 6, 6, '#3A3E4C', { a: .1, layers: 4 });
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; for (let y = 740, r = 0; y < 1400; y += 26, r++) { ctx.strokeStyle = 'rgba(120,112,108,.25)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-400, y); ctx.lineTo(2320, y); for (let x = -400 + (r % 2) * 28; x < 2320; x += 56) { ctx.moveTo(x, y); ctx.lineTo(x, y + 26); } ctx.stroke(); } ctx.restore();
+    const B = [[[300, 1100], [420, 720], [640, 420], [980, 240], [1500, 170]], [[640, 420], [760, 180], [900, 60]], [[980, 240], [1200, 330], [1480, 520], [1660, 700]], [[520, 560], [300, 380], [120, 300]], [[1220, 200], [1420, 40], [1600, -60]]];
+    B.forEach((b, i) => wcStroke(key + 'br' + i, b, i ? 26 : 60, 8, '#4A3A34', { a: .14 }));
+    for (let i = 0; i < 26; i++) wcAt(key + 'lf' + i, UNIT(8), i % 3 ? '#B79A3A' : '#8A8A40', 150 + hash(key, i) * 1500, 60 + hash(key, i, 1) * 560, 26 + hash(key, i, 2) * 16, { sy: .5, rot: hash(key, i, 3) * 3, a: .12 });
+  });
+  PERSIMMONS.forEach(([x, y, r], i) => {
+    const k = Math.round(clamp(ripe(i)) * 8) / 8, col = mix('#9AAE4E', '#EE7424', k);
+    wcAt(key + 'p' + i, UNIT(16), col, x, y, r, { a: .15, spread: .18, edge: .4, mul: false });
+    wcAt(key + 'ph' + i, UNIT(10), mix(col, '#FFF4D8', .5), x - r * .3, y - r * .3, r * .35, { a: .12, wet: true, mul: false, gran: 0 });
+    wcAt(key + 'pc' + i, UNIT(6), '#4A5A2A', x, y - r * .92, r * .32, { sy: .4, a: .2, spread: .3 });
+  });
+}
+const PERSIMMONS = [[520, 470, 30], [700, 350, 34], [820, 250, 28], [960, 300, 36], [1100, 230, 30], [1240, 330, 32], [1380, 440, 30], [1520, 560, 34], [380, 380, 28], [760, 120, 26], [1340, 110, 28], [1600, 660, 28], [640, 540, 26], [1180, 420, 26]];
+// a bicycle, side view, ink lines; x = centre, gy = ground; d = distance rolled (turns the wheels)
+function bicycle(x, gy, s, d, o = {}) {
+  const r = s * .34, fx = x + s * .55, bx = x - s * .55, wy = gy - r;
+  const draw = (col, lw) => {
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const cx of [bx, fx]) { ctx.beginPath(); ctx.arc(cx, wy, r, 0, TAU); ctx.stroke(); ctx.save(); ctx.lineWidth = lw * .35; ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI - d / r; ctx.moveTo(cx - Math.cos(a) * r, wy - Math.sin(a) * r); ctx.lineTo(cx + Math.cos(a) * r, wy + Math.sin(a) * r); } ctx.stroke(); ctx.restore(); }
+    const seat = [x - s * .2, wy - s * .5], bar = [x + s * .42, wy - s * .56], crank = [x, wy];
+    ctx.beginPath(); ctx.moveTo(bx, wy); ctx.lineTo(crank[0], crank[1]); ctx.lineTo(seat[0], seat[1]); ctx.lineTo(bx, wy);
+    ctx.moveTo(seat[0] + s * .03, seat[1] + s * .05); ctx.lineTo(bar[0], bar[1] + s * .08); ctx.lineTo(crank[0], crank[1]);
+    ctx.moveTo(fx, wy); ctx.lineTo(bar[0], bar[1]); ctx.lineTo(bar[0] - s * .1, bar[1] - s * .06);
+    ctx.moveTo(seat[0] - s * .1, seat[1] - s * .02); ctx.lineTo(seat[0] + s * .08, seat[1] - s * .02); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fx + s * .02, bar[1] + s * .04); ctx.lineTo(fx + s * .32, bar[1] + s * .04); ctx.lineTo(fx + s * .28, bar[1] + s * .26); ctx.lineTo(fx + s * .04, bar[1] + s * .26); ctx.closePath(); ctx.stroke();
   };
-  if (lt < 8) {                                   // 148–152 they squeeze in, the timer blinks; 152–156 "I" run in last
-    camBegin(960, 540, 1);
-    layer('s11bg', -200, -200, 2320, 1480, () => { wcBands('s11sky', -200, -200, 2320, 900, ['#1F2652', '#2E3A73', '#4A5288'], { a: .1 }); wcRect('s11fl', -200, 860, 2320, 600, '#5A5070', { a: .08, wet: true }); });
-    moonWC(960, 170, 80, { glow: .6 });
-    group(seg(lt, .4, 3.4), seg(lt, 4.2, 6.2));
-    oldCamera(1780, 900, 90, Math.floor(lt * 2) % 2 === 0);
+  ctx.save(); ctx.translate(0, gy); ctx.transform(1, 0, 1.5, -.3, 0, 0); ctx.translate(0, -gy); ctx.globalAlpha *= .22; draw('#4A4A70', s * .05); ctx.restore();
+  draw('#2E2A36', Math.max(2, s * .022));
+  return [fx + s * .17, wy - s * .56 + s * .02];     // the basket
+}
+function hutongLayer() {
+  layer('hutong', -600, -300, 4400, 1700, () => {
+    wcBands('hts', -600, -300, 4400, 800, ['#8FB0DA', '#B4CBE6', '#D8E4EE'], { a: .075 });
+    wcRect('htwall', -600, 380, 4400, 540, '#A8A6AA', { a: .09, spread: .06 });
+    wc('htcap', [[-600, 340], [3800, 340], [3800, 396], [-600, 396]], '#4E5260', { a: .12, spread: .04 });
+    for (let x = -600; x < 3800; x += 24) wcStroke('htct' + x, [[x, 344], [x + 3, 392]], 6, 6, '#3A3E4C', { a: .1, layers: 4 });
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; for (let y = 410, r = 0; y < 920; y += 26, r++) { ctx.strokeStyle = 'rgba(120,112,108,.24)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-600, y); ctx.lineTo(3800, y); for (let x = -600 + (r % 2) * 28; x < 3800; x += 56) { ctx.moveTo(x, y); ctx.lineTo(x, y + 26); } ctx.stroke(); } ctx.restore();
+    for (const dx of [700, 2300]) { wcRect('htdoor' + dx, dx, 520, 200, 400, '#B03A30', { a: .15, spread: .04, edge: .4 }); wcRect('htdf' + dx, dx - 16, 500, 232, 22, '#5A3A34', { a: .15, spread: .04 }); for (const s of [0, 1]) { ctx.fillStyle = '#C9983E'; ctx.beginPath(); ctx.arc(dx + 80 + s * 40, 720, 7, 0, TAU); ctx.fill(); } }
+    for (let i = 0; i < 5; i++) { const x = -100 + i * 900; wcStroke('htsh' + i, [[x, 380], [x + 120, 600], [x + 160, 900]], 26, 10, '#6A6A90', { a: .05, wet: true }); for (let j = 0; j < 14; j++) wcAt('htsl' + i + ':' + j, UNIT(8), '#6A6A90', x - 160 + hash('hs', i, j) * 520, 400 + hash('hs', j, i) * 260, 30 + hash('hs', i + j) * 30, { sy: .6, a: .05, wet: true }); }
+    wcRect('htgrd', -600, 916, 4400, 500, '#BDB2A0', { a: .08, spread: .15, wet: true });
+    for (let i = 0; i < 30; i++) wcAt('htlf' + i, UNIT(6), i % 2 ? '#E0B040' : '#C98A30', -500 + hash('hl', i) * 4200, 940 + hash('hl', i, 1) * 180, 9, { sy: .5, rot: i, a: .2 });
+  });
+}
+function S2(lt, t) {
+  if (lt < 3) {                                   // 14–17 pigeons circle through the blue; the crane joins them (pan right)
+    const cx = kf(lt, [[-1, 900], [3, 1500]], easeIO);
+    camBegin(cx, 540, 1);
+    bjSky();
+    cloudWC('bjc1', 700, 300, 280, '#FFFFFF', .9); cloudWC('bjc2', 1900, 180, 360, '#FFFFFF', .8); cloudWC('bjc3', 2500, 420, 240, '#FFFFFF', .7);
+    const C = [lerp(900, 1700, seg(lt, -1, 3)), 520];
+    for (let i = 0; i < 14; i++) {
+      const a = lt * 1.4 + i / 14 * TAU + hash('pg', i) * .4, R = 260 + hash('pg', i, 1) * 160;
+      const x = C[0] + Math.cos(a) * R, y = C[1] + Math.sin(a) * R * .38 + hash('pg', i, 2) * 60, d = .75 + .25 * Math.sin(a);
+      pigeon(x, y, 96 * d, lt * 3.4 + hash('pg', i, 3), { flip: Math.sin(a) > 0 });
+    }
+    const k = seg(lt, -1, 2), [x, y] = k < 1 ? arcPt([500, 820], [C[0] - 180, C[1] + 60], 200, easeOut(k)) : [C[0] + Math.cos(lt * 1.4) * 200, C[1] + 60 + Math.sin(lt * 1.4) * 60];
+    crane(x, y, 130, lt * 2.2, { rot: -.1 });
     camEnd();
-  } else if (lt < 11) {                           // 156–159 the flash
+  } else if (lt < 6) {                            // 17–20 the pigeons land on the ridge one by one; the crane lands last
     camBegin(960, 540, 1);
-    layer('s11bg', -200, -200, 2320, 1480, () => {});
-    moonWC(960, 170, 80, { glow: .6 });
-    group(1, 1);
-    oldCamera(1780, 900, 90, false);
+    bjSky(); cloudWC('bjc4', 1500, 180, 300, '#FFFFFF', .8);
+    roofsLayer();
+    for (let i = 0; i < 9; i++) {
+      const t0 = 3 + i * .24, k = ease(seg(lt, t0, t0 + .9)), px = RIDGE.x0 - 60 + i * 96 + (i > 4 ? 120 : 0), py = RIDGE.y - 26;
+      const [x, y] = arcPt([px - 700 + i * 40, 60 + hash('pl', i) * 120], [px, py], -60, k);
+      pigeon(x, y, 80, k < 1 ? lt * 3.6 + i * .3 : 0, { perch: k >= 1, flip: k >= 1 && i % 3 === 0 });
+    }
+    const k = ease(seg(lt, 4.8, 5.8)), [x, y] = arcPt([1700, 80], [960, RIDGE.y - 26], -40, k);
+    crane(x, y, 90, k < 1 ? lt * 2.4 : .25, { fold: k >= 1, rot: (1 - k) * .15 });
     camEnd();
-    fillScreen('#FFF8E6', lt < 8.25 ? seg(lt, 8, 8.25) : 1);
-  } else if (lt < 16) {                           // 159–164 their backs; the flash stays in the sky as a full moon
-    const z = kf(lt, [[11, 1.15], [16, 1]], ease);
+  } else if (lt < 9) {                            // 20–23 persimmons ripen from green to orange one by one (slow push)
+    const z = kf(lt, [[6, 1], [9, 1.12]], ease);
+    camBegin(960, 480, z);
+    persimmonTree('bjper', t, i => seg(lt, 6.2 + i * .17, 6.8 + i * .17));
+    camEnd();
+  } else if (lt < 12) {                           // 23–26 a bicycle rolls along the hutong wall; the crane rides in its basket (pan with it)
+    const bx = lerp(300, 2600, seg(lt, 9, 12)), cx = bx + 60;
+    camBegin(cx, 540, 1);
+    hutongLayer();
+    const [kx, ky] = bicycle(bx, 930, 300, bx);
+    crane(kx - 10, ky - 26, 80, .25, { fold: true });
+    camEnd();
+  } else if (lt < 15) {                           // 26–29 北海白塔 at dusk: the sky blushes, the crane circles the spire
+    camBegin(960, 540, 1);
+    const p = seg(lt, 12, 14.5);
+    bandsL('bjdusk0', -200, -200, 2320, 1480, ['#9CB4DA', '#B8C8E4', '#D8DEEC'], .075);
+    ctx.save(); ctx.globalAlpha = ease(p); bandsL('bjdusk1', -200, -200, 2320, 1480, ['#C7A2C8', '#EBB1B8', '#F6D2B8'], .075); ctx.restore();
+    layer('bjbeihai', -200, 300, 2320, 1100, () => {
+      wc('bhisle', [[250, 800], [520, 700], [800, 650], [1120, 650], [1420, 700], [1700, 800]], '#6A7A6A', { a: .09, spread: .2 });
+      for (let i = 0; i < 16; i++) { const x = 330 + i * 86 + hash('bh', i) * 30, y = 770 - Math.sin((x - 250) / 1450 * Math.PI) * 120; wcAt('bhtr' + i, UNIT(12), i % 3 ? '#4E6A56' : '#6A7E4E', x, y, 50 + hash('bh', i, 1) * 50, { sy: 1.1, a: .08, spread: .5 }); }
+      wcRect('bhwater', -200, 780, 2320, 620, '#8C9CC0', { a: .08, spread: .1, wet: true });
+      ctx.save(); ctx.translate(0, 1560); ctx.scale(1, -1); ctx.globalAlpha = .25; whiteDagoba('bhdagR', 960, 780, 560, '#E8E4EC'); ctx.restore();
+    });
+    const a = seg(lt, 12.4, 14.8) * TAU * 1.05 + Math.PI, cx0 = 960, cy0 = 190, far = Math.sin(a) < 0;
+    const cr = () => crane(cx0 + Math.cos(a) * 200, cy0 + Math.sin(a) * 50, 70 * (1 + .25 * Math.sin(a)), lt * 2.6, { flip: Math.cos(a + Math.PI / 2) < 0 });
+    if (far) cr();
+    whiteDagoba('bhdag', 960, 780, 560, '#F4F0EC');
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgba('#F0B4A8', .18 * p); ctx.fillRect(-200, -200, 2320, 1480); ctx.restore();
+    if (!far) cr();
+    camEnd();
+  } else {                                        // 29–32 one persimmon drops and falls toward the lens until it fills the frame
+    const z = kf(lt, [[15, 1], [18, 1.25]], easeIn);
     camBegin(960, 540, z);
-    layer('s11bg2', -200, -200, 2320, 1480, () => { wcBands('s11sky2', -200, -200, 2320, 1000, ['#141A40', '#1F2652', '#2E3A73'], { a: .12 }); wcRect('s11fl2', -200, 900, 2320, 600, '#3A3860', { a: .09, wet: true }); });
-    moonWC(960, 340, 260, { colours: .55, t, glow: 1.2 });
-    const backs = ['sanyifu', 'sanyi', 'tongtong', 'erjiu', 'erjiumu', 'daidai', 'eryi', 'rere', 'laoye', 'laolao', 'mama', 'baba', 'lulu', 'wo', 'daju', 'doudou'];
-    backs.forEach((r, i) => puppet(r, 'back', 110 + i * 113, 1080 + (i % 2) * 30, 480, { t, tint: ['#141A40', .35], shadow: false }));
-    rabbit(960, 1060, 50, t, { alpha: .9 });
+    bandsL('bjdusk1', -200, -200, 2320, 1480, ['#C7A2C8', '#EBB1B8', '#F6D2B8'], .075);
+    wcStroke('bjlast-br', [[-100, 120], [400, 260], [900, 330], [1300, 300]], 30, 8, '#4A3A34', { a: .14 });
+    wcAt('bjlast-lf', UNIT(8), '#B79A3A', 1040, 360, 40, { sy: .45, rot: .6, a: .13 });
+    const k = seg(lt, 15.6, 18), r = 44 * Math.pow(40, easeIn(k)), y = 380 + 60 * Math.sin(k * Math.PI);
+    wcAt('bjlast-p', UNIT(20), '#EE6A24', 960 + k * 10, y, r, { a: .16, spread: .18, edge: .4, mul: false });
+    wcAt('bjlast-ph', UNIT(12), '#FFD0A0', 960 - r * .3, y - r * .3, r * .35, { a: .12, wet: true, mul: false, gran: 0 });
+    if (k < .1) wcAt('bjlast-pc', UNIT(6), '#4A5A2A', 960, y - r * .92, r * .32, { sy: .4, a: .2 });
     camEnd();
-    fillScreen('#FFF8E6', 1 - seg(lt, 11, 12.5));
-  } else {                                        // 164–168 the moon, petals drifting; then it shrinks into a cup
-    camBegin(960, 540, 1);
-    layer('s11bg2', -200, -200, 2320, 1480, () => {});
-    moonWC(960, 540, 420, { colours: .55, t, glow: 1.2 });
-    floretRain('s11fl', 200, 1700, -100, 1100, 30, t, { s: 10 });
-    camEnd();
-    const shrink = seg(lt, 18.8, 20);
-    if (shrink > 0) iris(960, 540, lerp(1300, 60, easeIn(shrink)), '#F7F2E8');
   }
 }
-
-// ═════════ 镜12 茶杯 (168–180) · 纸白 ═════════
-function S12(lt, t) {
-  ambient(['#F4E0C8', .06]);
-  if (lt < 8) {                                   // 168–172 the teacup with the moon on the tea; 172–176 a drop runs down the rim (tilt down)
-    const cy = lt < 4 ? 540 : kf(lt, [[4, 540], [8, 820]], easeIO);
-    camBegin(960, cy, 1);
-    layer('s12bg', -200, -200, 2320, 1880, () => wcBands('s12bg', -200, -200, 2320, 1880, ['#F4E9D8', '#F7F2E8', '#F4EDE2'], { a: .05 }));
-    ctx.save(); ctx.globalAlpha = .5; bust('laolao', 'face', 'face', 0, 1420, 720, 540); ctx.restore();
-    const cx = 880, cyy = 700 - ease(seg(lt, 1, 3)) * 30;
-    wc('s12cup', [...arcPts(cx, cyy, 260, 0, Math.PI, 18, 220), [cx - 260, cyy]], '#EFE8DA', { a: .1, spread: .08, edge: .45 });
-    wcAt('s12tea', UNIT(24), '#C9923A', cx, cyy, 240, { sy: .24, a: .1, spread: .06 });
-    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cyy, 238, 56, 0, 0, TAU); ctx.clip(); moonWC(cx + 30, cyy, 44, { glow: .5 }); ctx.restore();
-    wcAt('s12rim', UNIT(24), '#D8CDB8', cx, cyy, 262, { sy: .25, a: 0, layers: 1, edge: .7, edgeW: 3 });
-    if (lt > 4) { const k = seg(lt, 4.2, 7.6), y = lerp(cyy + 20, cyy + 480, easeIn(k)), x = cx + 250 - k * 10; drop(x, y, 14, t, { sy: 1.3, glowA: .15 }); }
-    camEnd();
-  } else {                                        // 176–180 back on the blank paper: the drop lands and blooms, as at the start
-    camBegin(960, 540, 1);
-    const k = seg(lt, 8, 8.9);
-    if (lt < 8.9) drop(960, lerp(-40, 560, easeIn(k)), 20, t, { sy: 1.25 });
-    else { wcBloom('s12bloom', 960, 572, 120, GOLD, seg(lt, 8.9, 9.8), { a: .06 }); drop(960, 552, 24, t, { glowA: .15 }); }
-    camEnd();
-    paperCover(seg(lt, 10.4, 12));
-  }
-}
-
-const SHOTS = [
-  [0, S1, '纸'], [10, S2, '二舅二舅妈袋袋'], [22, S3, '我和璐璐'], [34, S4, '大舅兜兜'], [46, S5, '三姨一家'], [58, S6, '二姨热热'],
-  [72, S7, '姥姥姥爷'], [86, S8, '厨房'], [106, S9, '黄昏的路'], [124, S10, '圆桌'], [148, S11, '全家福'], [168, S12, '茶杯'],
-];
-VIEWS.cast = (t) => { Object.keys(ROLE).forEach((r, i) => puppet(r, 'front', 120 + i * 112, 1000, 700, { t })); };
-
-// ── rig test: 我 and 璐璐 under the osmanthus (6 s). Breathing, a turn of the head, a wave,
-//    she steps in and leans her head on his shoulder, they sway together. ──
-function sampleWoLulu(t) {
-  ambient(['#F0B860', .1], ['#FFE2A0', .2]);
-  camBegin(960, 540, 1);
-  sky('s5sky', ['#F3D9A4', '#F6E6C2', '#F2E9D6'], { ground: '#D8C590', gy: 830, h: 1000 });
-  osmanthusWC('s5tree', 520, 1000, 760, t, 1);
-  const sway = Math.sin(t * 1.3) * .012;
-  // 我: turns his head to her (1.0–1.6), waves the V hand twice (1.2–2.4), leans his head toward hers (3.6–4.4)
-  const look = ease(seg(t, 1.0, 1.6)), wave = seg(t, 1.2, 2.4), toward = ease(seg(t, 3.6, 4.4));
-  const woPose = {
-    root: sway + .025 * toward, spine: .02 * look + .03 * toward,
-    head: .10 * look + .12 * toward + .015 * Math.sin(t * 2.1),
-    upperR: -.06 * Math.sin(wave * Math.PI), foreR: .28 * Math.sin(wave * TAU * 2) * Math.sin(wave * Math.PI),
-  };
-  puppet('wo', 'main', 800, 1060, 960, { t, pose: woPose });
-  // 璐璐: steps in (2.2–3.0), leans and rests her head on his shoulder (2.8–3.6), stays, swaying with him
-  const step = ease(seg(t, 2.2, 3.0)), lean = ease(seg(t, 2.8, 3.6));
-  const luluPose = {
-    rootDx: -190 * step, rootDy: -Math.sin(step * Math.PI) * 10,
-    root: -.035 * lean + sway, spine: -.07 * lean - .01 * Math.sin(t * 1.7),
-    head: -.30 * lean - .02 * Math.sin(t * 2.3),
-  };
-  puppet('lulu', 'main', 1230, 1060, 960, { t, pose: luluPose });
-  floretRain('smpfl', 300, 1500, -100, 1100, 26, t, { s: 9 });
-  camEnd();
-}
-VIEWS.sample = sampleWoLulu;
-
-// ── replacement + 2.5D test: 我 and 璐璐 under the osmanthus (6 s) ──
-// Nobody bends. Characters are the card drawings, moved whole on twos (12 drawings a second, like stop motion);
-// turning is a swap between the card's views; depth comes from layers that move at different rates with the camera.
-function paperFlip(k) { return k < .5 ? 1 - ease(k * 2) * .85 : .15 + ease((k - .5) * 2) * .85; }   // squash, swap, open
-function sampleReplace(t) {
-  const q = Math.floor(t * 12 + 1e-6) / 12;                       // character time, on twos
-  ambient(['#F0B860', .1], ['#FFE2A0', .2]);
-  // camera: 0–2.2 wide, slow push; cut; 2.2–6 medium two-shot, slow push
-  const wide = t < 2.2, z = wide ? lerp(1, 1.06, ease(seg(t, 0, 2.2))) : lerp(1.75, 1.9, ease(seg(t, 2.2, 6)));
-  const cx = wide ? 960 : 930, cy = wide ? 560 : 330;
-  const L = (f, fn) => { const zz = 1 + (z - 1) * f; camBegin(lerp(960, cx, f), lerp(540, cy, f), zz); fn(); camEnd(); };
-  // far: sky and hills
-  L(.35, () => sky('s5sky', ['#F3D9A4', '#F6E6C2', '#F2E9D6'], { ground: '#D8C590', gy: 830, h: 1000 }));
-  // mid: the tree
-  L(.75, () => osmanthusWC('s5tree', 470, 1000, 780, t, 1));
-  // the two of them
-  L(1, () => {
-    // 我: 1.0–1.4 turns to look at her (main → side), 1.8–2.2 turns back to us (side → main); close-ups stay on the sharp main view
-    const turn1 = seg(q, 1.0, 1.4), turn2 = seg(q, 1.8, 2.2);
-    let woView = 'main', woSx = 1;
-    if (turn1 > 0 && turn2 === 0) { woView = turn1 < .5 ? 'main' : 'side'; woSx = paperFlip(turn1); }
-    if (turn2 > 0) { woView = turn2 < .5 ? 'side' : 'main'; woSx = paperFlip(turn2); }
-    const woLean = [0, .012, .022, .028, .03][Math.min(4, Math.floor(seg(q, 3.8, 4.6) * 4.999))];
-    puppet('wo', woView, 800, 1060, 960, { t: q, sx: woSx, rot: woLean });
-    // 璐璐: three small steps toward him (1.2–2.0), then (3.0–3.8) she leans in until her head rests at his shoulder
-    const stepK = seg(q, 1.2, 2.0), steps = Math.min(3, Math.floor(stepK * 3 + 1e-6)), inStep = (stepK * 3) % 1;
-    const x = 1240 - 76 * (steps + (stepK < 1 ? ease(inStep) : 0)), hopY = stepK > 0 && stepK < 1 ? -Math.sin(inStep * Math.PI) * 9 : 0;
-    const lean = [0, -.03, -.06, -.08, -.085, -.082][Math.min(5, Math.floor(seg(q, 3.0, 3.9) * 5.999))];
-    puppet('lulu', 'main', x, 1060 + hopY, 960, { t: q, rot: lean });
-    // a floret settles in her hair (4.4–5.6)
-    const fk = seg(t, 4.4, 5.6); if (fk > 0) { const [fx, fy] = arcPt([1180, 60], [985, 300], -40, easeOut(fk)); floret(fx + Math.sin(t * 5) * 10 * (1 - fk), fy, 10, t * 2 * (1 - fk)); }
-  });
-  // near: falling petals and an out-of-focus branch in front of the lens (painted once, blurred as one image)
-  L(1.5, () => {
-    floretRain('smp2fl', 200, 1700, -200, 1200, 18, t, { s: 13 });
-    ctx.save(); ctx.filter = 'blur(7px)';
-    layer('fgbranch2', 1500, -260, 900, 700, () => {
-      wcStroke('fgbranch2', [[2400, -150], [2000, 60], [1640, 160]], 46, 12, '#4A3A30', { a: .16 });
-      for (let i = 0; i < 9; i++) wcAt('fgleaf2' + i, UNIT(10), i % 2 ? '#3D7A62' : '#4F8C6C', 1620 + i * 70, 40 + (i % 3) * 55, 62, { sy: .55, rot: .5 - i * .2, a: .16, mul: false });
-      for (let i = 0; i < 14; i++) floret(1620 + hash('fgb', i) * 560, 0 + hash('fgb', i, 1) * 200, 15, i, .95);
-    });
-    ctx.restore();
-  });
-}
-VIEWS.sample2 = sampleReplace;

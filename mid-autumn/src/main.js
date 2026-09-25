@@ -1,6 +1,7 @@
 // ───────────────────────── main: render(t), the timeline, preview player, export hooks ─────────────────────────
-// SHOTS: [start, fn(lt, t, dur)] from scenes.js; each shot paints the whole frame.
-const SHOT_LIST = SHOTS.map((s, i) => ({ start: s[0], end: i + 1 < SHOTS.length ? SHOTS[i + 1][0] : DUR, fn: s[1], name: s[2] || '' }));
+// SHOTS: [start, fn(lt, t, dur), name, into] from scenes.js; each shot paints the whole frame.
+// into = how the shot arrives: {d: seconds before its start, type: 'dissolve' | 'ripple', x, y}
+const SHOT_LIST = SHOTS.map((s, i) => ({ start: s[0], end: i + 1 < SHOTS.length ? SHOTS[i + 1][0] : DUR, fn: s[1], name: s[2] || '', into: s[3] || null }));
 makeWCPaper();
 let VIEW = null;           // a test view (?view=cast) instead of the film
 function shotAt(t) { let i = SHOT_LIST.length - 1; while (i > 0 && t < SHOT_LIST[i].start) i--; return i; }
@@ -25,7 +26,15 @@ function render(t) {
   t = clamp(t, 0, DUR - 1e-4);
   BF = Math.floor(t * BOIL + 1e-6);
   if (VIEW) { paperUnder(); VIEW(t); grainOver(); return; }
-  drawShot(shotAt(t), t);
+  const i = shotAt(t), nx = SHOT_LIST[i + 1];
+  drawShot(i, t);
+  if (nx && nx.into && t > nx.start - nx.into.d) {          // the next shot arriving early: a dissolve or a ripple
+    const k = seg(t, nx.start - nx.into.d, nx.start);
+    if (nx.into.type === 'ripple') {
+      const main = ctx, bf = BF; ctx = BUF.getContext('2d'); drawShot(i + 1, t); ctx = main; BF = bf;
+      circleReveal('into' + i, nx.into.x, nx.into.y, lerp(0, 1400, easeIn(k)), () => ctx.drawImage(BUF, 0, 0), '#E8F2F4');
+    } else overlayShot(i + 1, t, ease(k));
+  }
   grainOver();
 }
 window.render = render;

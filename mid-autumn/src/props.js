@@ -1,8 +1,8 @@
 // ───────────────────────── props: Mid-Autumn things in watercolour ─────────────────────────
 const GOLD = '#E8B23A', GOLD_DK = '#C7862A', MOON = '#F6DE94', INDIGO = '#2E3A73', NIGHT = '#1F2652';
 
-// the colours the drop gathers from each person, in order (time in seconds when it picks them up)
-const PICKUPS = [[20, '#E88FA0'], [20.6, '#7CC3A2'], [27, '#2D3A6A'], [39, '#C22F35'], [50, '#F0B940'], [66, '#EF4E86'], [78, '#A62C35'], [99, '#D9A25A']];
+// the five cities' colours (persimmon, lantern red, shophouse mint and pink, river ochre, grassland blue); [time from which present, colour]
+const PICKUPS = [[0, '#E8762A'], [0, '#C8322E'], [0, '#7CC3A2'], [0, '#EF8FA8'], [0, '#D9A25A'], [0, '#4A6FB0']];
 
 // the drop of moon: a wobbling bead of gold paint with the colours it has picked up swirling inside
 function drop(x, y, r, t, o = {}) {
@@ -33,9 +33,9 @@ function moonWC(x, y, r, o = {}) {
   wcGlow(x, y, r * 1.35, '#FFF3D0', .3 * (o.glow ?? 1));
   wcAt('moon-body', UNIT(28), '#FBEFC8', x, y, r, { opaque: true, a: .2, layers: 12, spread: .12 });
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * .98, 0, TAU); ctx.clip();
-  wcAt('moon-wash1', UNIT(18), MOON, x - r * .15, y - r * .1, r * .85, { a: .1, spread: .5 });
-  wcAt('moon-wash2', UNIT(14), '#EFC870', x + r * .3, y + r * .25, r * .5, { a: .08, spread: .6 });
-  ctx.globalAlpha = .45;
+  wcAt('moon-wash1', UNIT(18), MOON, x - r * .15, y - r * .1, r * .85, { a: .06, spread: .5, wet: true });
+  wcAt('moon-wash2', UNIT(14), '#EFC870', x + r * .3, y + r * .25, r * .5, { a: .05, spread: .6, wet: true });
+  ctx.globalAlpha = .28;
   wcAt('moon-tree', UNIT(12), '#D8A860', x + r * .28, y - r * .12, r * .3, { a: .1, spread: .7, gran: .2 });
   // the rabbit's silhouette
   wcAt('moon-rab-b', UNIT(12), '#D8A860', x - r * .28, y + r * .2, r * .2, { sy: .72, a: .1, spread: .4 });
@@ -106,7 +106,7 @@ function osmanthusWC(key, x, y, s, t, grow = 1) {
   cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leafL' + i, UNIT(10), '#9CC98A', x + dx * s - r * s * .25, y + dy * s - r * s * .25, r * s * .5, { sy: .7, a: .07, spread: .6, wet: true }); });
   for (let i = 0; i < 120; i++) {
     const c = cl[i % cl.length], a = hash(key, i) * TAU, rr = Math.sqrt(hash(key, i, 1)) * c[2] * s * .85;
-    floret(x + c[0] * s + Math.cos(a) * rr, y + c[1] * s + Math.sin(a) * rr * .8, s * .018 + 2, i + t * .3, .95);
+    floret(x + c[0] * s + Math.cos(a) * rr, y + c[1] * s + Math.sin(a) * rr * .8, s * .009 + 2, i + t * .3, .8);
   }
   ctx.restore();
 }
