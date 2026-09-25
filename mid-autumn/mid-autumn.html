@@ -1228,7 +1228,7 @@ function S1(lt, t) {
   if (lt < 3) {                                   // 0–3 the dawn wash runs down the paper
     camBegin(960, 540, 1);
     camEnd();
-    wetFront('s1front', lerp(-80, 1180, easeIO(seg(lt, .2, 3))), () => { camBegin(960, 540, 1); gateMorning(lt, 0); s1Rabbit(lt, t); camEnd(); });
+    wetFront('s1front', lerp(120, 1180, easeOut(seg(lt, 0, 2.8))), () => { camBegin(960, 540, 1); gateMorning(lt, 0); s1Rabbit(lt, t); camEnd(); });
   } else if (lt < 9) {                            // 3–9 push in; the sunbeam crosses and the characters turn gold one by one
     const z = kf(lt, [[3, 1], [9, 1.55]], easeIO), cy = lerp(540, 470, seg(z, 1, 1.55));
     camBegin(960, cy, z);
@@ -1573,7 +1573,7 @@ function S3(lt, t) {
     const cy = kf(lt, [[12, 760], [15, 300]], easeIO);
     camBegin(960, cy, 1);
     bandsL('xapags', -400, -500, 2720, 1980, ['#10163A', '#1A2150', '#2C3268', '#48467A'], .08);
-    moonWC(960, lerp(700, PAGODA_TIP - 110, easeOut(seg(lt, 12, 14.6))), 84, { glow: .8 });
+    { const k = easeOut(seg(lt, 12, 14.6)), [mx, my] = arcPt([1500, 900], [960, PAGODA_TIP - 110], -120, k); moonWC(mx, my, 84, { glow: .8 }); }
     wildGoosePagoda('xapag', false);
     const reach = Math.max(hop(lt, 14.5, 14.8, 16).dy, hop(lt, 14.95, 15.25, 20).dy);
     bunny(962, 54 + reach, 30, t, { glow: .3 });
@@ -1893,7 +1893,7 @@ function S5(lt, t) {
   } else if (lt < 15) {                           // 80–83 the deer runs across the grass; a flower opens in every hoofprint (pan right, following)
     const dx = lerp(200, 2600, seg(lt, 12, 15));
     camBegin(dx + 200, 560, 1);
-    landL('btgr', -400, -300, 4200, 1700, ['#5A5E98', '#9A8CBC', '#E0B8C0'], ['#7E9A64', '#4E6E4A'], 700);
+    landL('btgr', -1000, -300, 4800, 1700, ['#5A5E98', '#9A8CBC', '#E0B8C0'], ['#7E9A64', '#4E6E4A'], 700);
     const gy = 900;
     for (let i = 0; ; i++) { const px = 260 + i * 110; if (px > dx - 20) break; const tb = 12 + (px - 200) / 2400 * 3; flower(px + (i % 2) * 30, gy + 20 + (i % 2) * 18, 16, seg(lt, tb + .15, tb + .6), ['#F6E0F0', '#FFF4D0', '#E8C8F0'][i % 3]); }
     deer(dx, gy, 300, { run: lt * 2.2, t });
@@ -2291,11 +2291,11 @@ function S8(lt, t) {
     if (lt < 15) { z = kf(lt, [[12, 1.7], [15, 1.85]], ease); cx = 660; cy = 610; }
     else if (lt < 18) { z = 1; cy = 600; }
     else if (lt < 21) cy = kf(lt, [[18, 600], [21, 100]], easeIO);
-    else cy = kf(lt, [[21, 100], [24, -560]], easeIO);
+    else cy = kf(lt, [[21, 100], [24, -480]], easeIO);
     camBegin(cx, cy, z);
     bandsL('cupsky', -400, -1200, 2720, 2700, ['#10163C', '#1A2250', '#283064', '#3A3E70', '#4E4A70'], .08);
     stars('cupst', 80, -400, -1200, 2720, 1400, t);
-    moonWC(960, -620, 240, { glow: 1 });
+    moonWC(960, -620, 300, { glow: 1.1 });
     layer('cupbr', -400, -400, 2720, 900, () => {
       wcStroke('cupbr1', [[-400, -120], [200, -60], [700, 40], [1100, 60]], 40, 10, '#2A2030', { a: .15 });
       wcStroke('cupbr2', [[2320, -200], [1800, -80], [1400, 10]], 36, 10, '#2A2030', { a: .15 });
@@ -2482,7 +2482,8 @@ function buildAudio(sr = 44100) {
   function pluck(t, f, amp = .3, pan = 0, dur = 2.6, bright = .5) {
     const P = Math.max(2, Math.round(sr / f)), buf = new Float32Array(P), r = mulberry(Math.floor(t * 1000 + f));
     for (let i = 0; i < P; i++) buf[i] = (r() * 2 - 1) * (1 - bright * .5) + (i / P - .5) * bright;
-    let idx = 0, prev = 0; const n = Math.floor(dur * sr), i0 = at(t), damp = .4985 + bright * .0012;
+    for (let pass = 0; pass < 3 - Math.round(bright * 2); pass++) for (let i = 0; i < P; i++) buf[i] = (buf[i] + buf[(i + 1) % P] + buf[(i + P - 1) % P]) / 3;   // a softer finger
+    let idx = 0, prev = 0; const n = Math.floor(dur * sr), i0 = at(t), damp = .4978 + bright * .0016;
     for (let k = 0; k < n; k++) {
       const v = buf[idx], nv = damp * (v + prev); prev = v; buf[idx] = nv; idx = (idx + 1) % P;
       const env = k < 40 ? k / 40 : 1;
@@ -2600,7 +2601,7 @@ function buildAudio(sr = 44100) {
   [78.2, 78.9].forEach(t => knock(t, 260, .09, 0, 22, .3));
   bell(84, 1760, .08, 0, 1.4, [[1, 1, 1], [1.5, .5, .6], [2.2, .2, .3]]);
   // 镜6 新加坡: rain, shutters, lanterns, the frangipani, the rabbit shaking itself dry, the Supertrees, the drop
-  noise(84.6, 96, .09, swell(.03, .12), .5, .6, 0, 60); noise(84.6, 96, .05, swell(.03, .12), .5, .6, .5, 61);
+  noise(84.6, 96, .04, swell(.03, .12), .35, .6, -.3, 60); noise(84.6, 96, .025, swell(.03, .12), .35, .6, .4, 61);
   for (let i = 4; i <= 6; i++) for (let j = 0; j < 3; j++) knock(86 + 3.3 + (i - 4) * .7 + j * .22, 320, .06, (j - 1) * .4, 35, .5);
   for (let i = 0; i < 4; i++) ting(90.4 + i * .3, .04, (i - 1.5) * .3, 2637);
   bell(94.4, 1318, .06, -.2, 1.2, [[1, 1, 1], [2, .3, .5]]);

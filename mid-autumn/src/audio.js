@@ -14,7 +14,8 @@ function buildAudio(sr = 44100) {
   function pluck(t, f, amp = .3, pan = 0, dur = 2.6, bright = .5) {
     const P = Math.max(2, Math.round(sr / f)), buf = new Float32Array(P), r = mulberry(Math.floor(t * 1000 + f));
     for (let i = 0; i < P; i++) buf[i] = (r() * 2 - 1) * (1 - bright * .5) + (i / P - .5) * bright;
-    let idx = 0, prev = 0; const n = Math.floor(dur * sr), i0 = at(t), damp = .4985 + bright * .0012;
+    for (let pass = 0; pass < 3 - Math.round(bright * 2); pass++) for (let i = 0; i < P; i++) buf[i] = (buf[i] + buf[(i + 1) % P] + buf[(i + P - 1) % P]) / 3;   // a softer finger
+    let idx = 0, prev = 0; const n = Math.floor(dur * sr), i0 = at(t), damp = .4978 + bright * .0016;
     for (let k = 0; k < n; k++) {
       const v = buf[idx], nv = damp * (v + prev); prev = v; buf[idx] = nv; idx = (idx + 1) % P;
       const env = k < 40 ? k / 40 : 1;
@@ -132,7 +133,7 @@ function buildAudio(sr = 44100) {
   [78.2, 78.9].forEach(t => knock(t, 260, .09, 0, 22, .3));
   bell(84, 1760, .08, 0, 1.4, [[1, 1, 1], [1.5, .5, .6], [2.2, .2, .3]]);
   // 镜6 新加坡: rain, shutters, lanterns, the frangipani, the rabbit shaking itself dry, the Supertrees, the drop
-  noise(84.6, 96, .09, swell(.03, .12), .5, .6, 0, 60); noise(84.6, 96, .05, swell(.03, .12), .5, .6, .5, 61);
+  noise(84.6, 96, .04, swell(.03, .12), .35, .6, -.3, 60); noise(84.6, 96, .025, swell(.03, .12), .35, .6, .4, 61);
   for (let i = 4; i <= 6; i++) for (let j = 0; j < 3; j++) knock(86 + 3.3 + (i - 4) * .7 + j * .22, 320, .06, (j - 1) * .4, 35, .5);
   for (let i = 0; i < 4; i++) ting(90.4 + i * .3, .04, (i - 1.5) * .3, 2637);
   bell(94.4, 1318, .06, -.2, 1.2, [[1, 1, 1], [2, .3, .5]]);

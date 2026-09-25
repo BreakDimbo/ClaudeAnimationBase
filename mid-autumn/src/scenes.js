@@ -278,7 +278,7 @@ function S1(lt, t) {
   if (lt < 3) {                                   // 0–3 the dawn wash runs down the paper
     camBegin(960, 540, 1);
     camEnd();
-    wetFront('s1front', lerp(-80, 1180, easeIO(seg(lt, .2, 3))), () => { camBegin(960, 540, 1); gateMorning(lt, 0); s1Rabbit(lt, t); camEnd(); });
+    wetFront('s1front', lerp(120, 1180, easeOut(seg(lt, 0, 2.8))), () => { camBegin(960, 540, 1); gateMorning(lt, 0); s1Rabbit(lt, t); camEnd(); });
   } else if (lt < 9) {                            // 3–9 push in; the sunbeam crosses and the characters turn gold one by one
     const z = kf(lt, [[3, 1], [9, 1.55]], easeIO), cy = lerp(540, 470, seg(z, 1, 1.55));
     camBegin(960, cy, z);

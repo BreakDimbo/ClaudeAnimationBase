@@ -115,7 +115,7 @@ function S3(lt, t) {
     const cy = kf(lt, [[12, 760], [15, 300]], easeIO);
     camBegin(960, cy, 1);
     bandsL('xapags', -400, -500, 2720, 1980, ['#10163A', '#1A2150', '#2C3268', '#48467A'], .08);
-    moonWC(960, lerp(700, PAGODA_TIP - 110, easeOut(seg(lt, 12, 14.6))), 84, { glow: .8 });
+    { const k = easeOut(seg(lt, 12, 14.6)), [mx, my] = arcPt([1500, 900], [960, PAGODA_TIP - 110], -120, k); moonWC(mx, my, 84, { glow: .8 }); }
     wildGoosePagoda('xapag', false);
     const reach = Math.max(hop(lt, 14.5, 14.8, 16).dy, hop(lt, 14.95, 15.25, 20).dy);
     bunny(962, 54 + reach, 30, t, { glow: .3 });
@@ -435,7 +435,7 @@ function S5(lt, t) {
   } else if (lt < 15) {                           // 80–83 the deer runs across the grass; a flower opens in every hoofprint (pan right, following)
     const dx = lerp(200, 2600, seg(lt, 12, 15));
     camBegin(dx + 200, 560, 1);
-    landL('btgr', -400, -300, 4200, 1700, ['#5A5E98', '#9A8CBC', '#E0B8C0'], ['#7E9A64', '#4E6E4A'], 700);
+    landL('btgr', -1000, -300, 4800, 1700, ['#5A5E98', '#9A8CBC', '#E0B8C0'], ['#7E9A64', '#4E6E4A'], 700);
     const gy = 900;
     for (let i = 0; ; i++) { const px = 260 + i * 110; if (px > dx - 20) break; const tb = 12 + (px - 200) / 2400 * 3; flower(px + (i % 2) * 30, gy + 20 + (i % 2) * 18, 16, seg(lt, tb + .15, tb + .6), ['#F6E0F0', '#FFF4D0', '#E8C8F0'][i % 3]); }
     deer(dx, gy, 300, { run: lt * 2.2, t });
