@@ -186,9 +186,9 @@ function greenTrain(x, y, t, d) {                  // x = front of the train, y 
 function postBox(x, y) {
   wcRect('pbbody', x - 70, y - 300, 140, 300, '#1E6A40', { a: .16, spread: .02, edge: .45, mul: false });
   wcAt('pbcap', UNIT(20), '#1A5A38', x, y - 300, 84, { sy: .35, a: .16, mul: false });
-  wcRect('pbslot', x - 44, y - 250, 88, 12, '#0A2014', { a: .2 });
+  ctx.fillStyle = '#0E2418'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 44, y - 252, 88, 12, 5) : ctx.rect(x - 44, y - 252, 88, 12); ctx.fill();
   wcAt('pbmark', UNIT(12), '#E8C040', x, y - 170, 22, { a: .16, mul: false });
-  wcRect('pbfoot', x - 80, y - 14, 160, 16, '#153A28', { a: .16 });
+  ctx.fillStyle = '#153A28'; ctx.fillRect(x - 78, y - 14, 156, 14);
   glow(x - 40, y - 240, 60, '#FFFFFF', .08);
 }
 const LETTER_FROM = [[200, 300, '#E8762A'], [1720, 360, '#C8322E'], [420, 120, '#7CC3A2'], [1500, 130, '#D9A25A'], [960, 60, '#4A6FB0']];
@@ -203,11 +203,16 @@ function postScene(skyK, t, lt) {
     else moonWC(bx, by, 56, { glow: .7 });
   }
   layer('pbwall', -400, 300, 2720, 1200, () => {
-    wcRect('pbw', -400, 380, 2720, 600, '#B4AEA8', { a: .09, spread: .04 });
+    { const g = ctx.createLinearGradient(0, 380, 0, 980); g.addColorStop(0, '#CFC8C0'); g.addColorStop(1, '#B8B0A8'); ctx.fillStyle = g; ctx.fillRect(-400, 380, 2720, 600); }
+    wcRect('pbw', -400, 380, 2720, 600, '#B4AEA8', { a: .025, spread: .04 });
     ctx.fillStyle = '#5A5E6C'; ctx.fillRect(-400, 350, 2720, 44); for (let x = -400; x < 2320; x += 26) limb([[x, 354], [x + 3, 392]], 5, 'rgba(40,44,56,.4)');
     ctx.save(); ctx.globalCompositeOperation = 'multiply'; for (let y = 410, r = 0; y < 980; y += 26, r++) { ctx.strokeStyle = 'rgba(120,112,108,.24)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-400, y); ctx.lineTo(2320, y); for (let x = -400 + (r % 2) * 28; x < 2320; x += 56) { ctx.moveTo(x, y); ctx.lineTo(x, y + 26); } ctx.stroke(); } ctx.restore();
-    for (let i = 0; i < 40; i++) wcAt('pbivy' + i, UNIT(8), i % 2 ? '#5A8A4A' : '#7AA05A', 1300 + hash('iv', i) * 500, 380 + hash('iv', i, 1) * 400, 22, { sy: .7, rot: i, a: .12 });
-    wcRect('pbgrd', -400, 960, 2720, 540, '#C8BCA8', { a: .08, wet: true });
+    // an osmanthus branch leaning over the wall, in flower
+    wcStroke('pbbr', [[1900, 300], [1560, 390], [1300, 430], [1100, 500]], 30, 8, '#4A3A34', { a: .15 });
+    wcStroke('pbbr2', [[1460, 410], [1360, 330], [1250, 310]], 14, 5, '#4A3A34', { a: .15 });
+    for (let i = 0; i < 46; i++) { const u = hash('iv', i), x = lerp(1100, 1800, u), y = lerp(500, 330, u) + (hash('iv', i, 1) - .5) * 130; wcAt('pbivy' + i, UNIT(8), i % 2 ? '#3D7A62' : '#4F8C6C', x, y, 26, { sy: .45, rot: hash('iv', i, 2) * 3, a: .13 }); }
+    for (let i = 0; i < 60; i++) floret(lerp(1100, 1800, hash('pf', i)), lerp(500, 330, hash('pf', i)) + (hash('pf', i, 1) - .5) * 120, 6, i, .95);
+    { const g = ctx.createLinearGradient(0, 960, 0, 1500); g.addColorStop(0, '#CFC4B2'); g.addColorStop(1, '#B8AC98'); ctx.fillStyle = g; ctx.fillRect(-400, 960, 2720, 540); }
   });
   if (skyK > 0) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgba('#3A4288', .55 * skyK); ctx.fillRect(-400, 300, 2720, 1200); ctx.restore(); }
   postBox(960, 970);

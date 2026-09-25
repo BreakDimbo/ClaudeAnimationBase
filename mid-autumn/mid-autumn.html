@@ -756,8 +756,9 @@ function moonWC(x, y, r, o = {}) {
   wcGlow(x, y, r * 1.35, '#FFF3D0', .3 * (o.glow ?? 1));
   wcAt('moon-body', UNIT(28), '#FBEFC8', x, y, r, { opaque: true, a: .2, layers: 12, spread: .12 });
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * .98, 0, TAU); ctx.clip();
-  wcAt('moon-wash1', UNIT(18), MOON, x - r * .15, y - r * .1, r * .85, { a: .06, spread: .5, wet: true });
-  wcAt('moon-wash2', UNIT(14), '#EFC870', x + r * .3, y + r * .25, r * .5, { a: .05, spread: .6, wet: true });
+  wcAt('moon-wash1', UNIT(18), MOON, x - r * .1, y - r * .05, r * .9, { a: .03, spread: .35, wet: true });
+  wcAt('moon-wash2', UNIT(14), '#EFC870', x + r * .3, y + r * .25, r * .45, { a: .025, spread: .5, wet: true });
+  { const g = ctx.createRadialGradient(x - r * .3, y - r * .3, r * .1, x, y, r); g.addColorStop(0, 'rgba(255,252,236,.35)'); g.addColorStop(1, 'rgba(255,252,236,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
   ctx.globalAlpha = .12;
   wcAt('moon-tree', UNIT(12), '#D8A860', x + r * .28, y - r * .12, r * .3, { a: .1, spread: .7, gran: .2 });
   ctx.restore();
@@ -829,12 +830,12 @@ function osmanthusWC(key, x, y, s, t, grow = 1) {
   if (grow <= 0) return;
   ctx.save();
   ctx.beginPath(); ctx.rect(x - s * 1.5, y - s * 1.7 * grow - 10, s * 3, s * 1.7 * grow + 40); ctx.clip();
-  wcStroke(key + 'trunk', [[x, y], [x - s * .04, y - s * .4], [x + s * .05, y - s * .75]], s * .12, s * .05, '#6B4A3A', { a: .14 });
-  wcStroke(key + 'br1', [[x - s * .02, y - s * .45], [x - s * .28, y - s * .72], [x - s * .45, y - s * .82]], s * .05, s * .015, '#6B4A3A', { a: .14 });
-  wcStroke(key + 'br2', [[x + s * .03, y - s * .58], [x + s * .3, y - s * .85], [x + s * .5, y - s * .9]], s * .045, s * .015, '#6B4A3A', { a: .14 });
+  wcStroke(key + 'trunk', [[x, y], [x - s * .04, y - s * .4], [x + s * .05, y - s * .75]], s * .12, s * .05, '#3E2C2C', { a: .16, mul: false });
+  wcStroke(key + 'br1', [[x - s * .02, y - s * .45], [x - s * .28, y - s * .72], [x - s * .45, y - s * .82]], s * .05, s * .015, '#3E2C2C', { a: .16, mul: false });
+  wcStroke(key + 'br2', [[x + s * .03, y - s * .58], [x + s * .3, y - s * .85], [x + s * .5, y - s * .9]], s * .045, s * .015, '#3E2C2C', { a: .16, mul: false });
   const cl = [[0, -1.08, .42], [-.38, -.9, .34], [.38, -.94, .36], [-.14, -1.34, .3], [.22, -1.32, .3], [-.55, -.7, .24], [.58, -.72, .25]];
-  cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leaf' + i, UNIT(14), i % 2 ? '#4F8C6C' : '#3D7A62', x + dx * s, y + dy * s, r * s, { sy: .82, a: .085, spread: .55, edge: .3 }); });
-  cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leafL' + i, UNIT(10), '#9CC98A', x + dx * s - r * s * .25, y + dy * s - r * s * .25, r * s * .5, { sy: .7, a: .07, spread: .6, wet: true }); });
+  cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leaf' + i, UNIT(14), i % 2 ? '#2E4E44' : '#26443C', x + dx * s, y + dy * s, r * s, { sy: .82, a: .12, spread: .5, edge: .3, mul: false }); });
+  cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leafL' + i, UNIT(10), '#5E8468', x + dx * s - r * s * .25, y + dy * s - r * s * .25, r * s * .5, { sy: .7, a: .07, spread: .6, wet: true, mul: false }); });
   for (let i = 0; i < 120; i++) {
     const c = cl[i % cl.length], a = hash(key, i) * TAU, rr = Math.sqrt(hash(key, i, 1)) * c[2] * s * .85;
     floret(x + c[0] * s + Math.cos(a) * rr, y + c[1] * s + Math.sin(a) * rr * .8, s * .009 + 2, i + t * .3, .8);
@@ -1402,7 +1403,7 @@ function hutongLayer() {
     for (let x = -600; x < 3800; x += 24) wcStroke('htct' + x, [[x, 344], [x + 3, 392]], 6, 6, '#3A3E4C', { a: .1, layers: 4 });
     ctx.save(); ctx.globalCompositeOperation = 'multiply'; for (let y = 410, r = 0; y < 920; y += 26, r++) { ctx.strokeStyle = 'rgba(120,112,108,.24)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-600, y); ctx.lineTo(3800, y); for (let x = -600 + (r % 2) * 28; x < 3800; x += 56) { ctx.moveTo(x, y); ctx.lineTo(x, y + 26); } ctx.stroke(); } ctx.restore();
     for (const dx of [700, 2300]) { wcRect('htdoor' + dx, dx, 520, 200, 400, '#B03A30', { a: .15, spread: .04, edge: .4 }); wcRect('htdf' + dx, dx - 16, 500, 232, 22, '#5A3A34', { a: .15, spread: .04 }); for (const s of [0, 1]) { ctx.fillStyle = '#C9983E'; ctx.beginPath(); ctx.arc(dx + 80 + s * 40, 720, 7, 0, TAU); ctx.fill(); } }
-    for (let i = 0; i < 5; i++) { const x = -100 + i * 900; wcStroke('htsh' + i, [[x, 380], [x + 120, 600], [x + 160, 900]], 26, 10, '#6A6A90', { a: .05, wet: true }); for (let j = 0; j < 14; j++) wcAt('htsl' + i + ':' + j, UNIT(8), '#6A6A90', x - 160 + hash('hs', i, j) * 520, 400 + hash('hs', j, i) * 260, 30 + hash('hs', i + j) * 30, { sy: .6, a: .05, wet: true }); }
+    for (let i = 0; i < 5; i++) { const x = -100 + i * 900; wcStroke('htsh' + i, [[x, 380], [x + 120, 600], [x + 160, 900]], 22, 8, '#7A7AA0', { a: .03, wet: true }); for (let j = 0; j < 22; j++) wcAt('htsl' + i + ':' + j, UNIT(8), '#7A7AA0', x - 180 + hash('hs', i, j) * 560, 390 + hash('hs', j, i) * 300, 12 + hash('hs', i + j) * 22, { sy: .55, rot: hash('hs', j) * 3, a: .03, wet: true }); }
     wcRect('htgrd', -600, 916, 4400, 500, '#BDB2A0', { a: .08, spread: .15, wet: true });
     for (let i = 0; i < 30; i++) wcAt('htlf' + i, UNIT(6), i % 2 ? '#E0B040' : '#C98A30', -500 + hash('hl', i) * 4200, 940 + hash('hl', i, 1) * 180, 9, { sy: .5, rot: i, a: .2 });
   });
@@ -1498,9 +1499,9 @@ function xaWall() {
     wc('xat-r1', [[tx - 420, 260], [tx + 420, 260], [tx + 360, 200], [tx - 360, 200]], '#241E36', { a: .14, spread: .04 });
     wc('xat-r2', [[tx - 380, 200], [tx + 380, 200], [tx + 300, 120], [tx + 250, 60], [tx - 250, 60], [tx - 300, 120]], '#241E36', { a: .14, spread: .04 });
     // the wall: merlons, face, brick courses
-    { const g = ctx.createLinearGradient(0, 560, 0, 1400); g.addColorStop(0, '#4A3E52'); g.addColorStop(1, '#2A2436'); ctx.fillStyle = g; ctx.fillRect(-700, 560, 4600, 840); }
+    { const g = ctx.createLinearGradient(0, 560, 0, 1400); g.addColorStop(0, '#6A5664'); g.addColorStop(.5, '#4A3C4E'); g.addColorStop(1, '#2A2436'); ctx.fillStyle = g; ctx.fillRect(-700, 560, 4600, 840); }
     wcRect('xa-face', -700, 560, 4600, 840, '#6A5A6A', { a: .05, spread: .03 });
-    for (let x = -700; x < 3900; x += 84) wcRect('xa-mer' + x, x, 500, 54, 64, '#5A4A5A', { a: .1, spread: .04 });
+    for (let x = -700; x < 3900; x += 84) wcRect('xa-mer' + x, x, 500, 54, 64, '#6A5A6A', { a: .14, spread: .04, mul: false });
     ctx.save(); ctx.globalCompositeOperation = 'multiply';
     for (let y = 580, r = 0; y < 1400; y += 30, r++) { ctx.strokeStyle = 'rgba(40,30,50,.28)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-700, y); ctx.lineTo(3900, y); for (let x = -700 + (r % 2) * 32; x < 3900; x += 64) { ctx.moveTo(x, y); ctx.lineTo(x, y + 30); } ctx.stroke(); }
     ctx.restore();
@@ -1508,7 +1509,7 @@ function xaWall() {
     XA_LAN.forEach((x, i) => limb([[x, 568], [x, 598]], 2, 'rgba(30,20,30,.7)'));
   });
 }
-function xaLanterns(lit, t) { XA_LAN.forEach((x, i) => lanternWC(x, 640, 40, lit(i, x), Math.sin(t * 1.3 + i * .7) * .04, 'xal' + i)); }
+function xaLanterns(lit, t) { XA_LAN.forEach((x, i) => { const l = lit(i, x); if (l > 0) glow(x, 700, 220, '#FF9A50', .22 * l); lanternWC(x, 640, 40, l, Math.sin(t * 1.3 + i * .7) * .04, 'xal' + i); }); }
 function bellTower(key) {
   bandsL(key + 's', -400, -400, 2720, 1880, ['#141A42', '#1F2658', '#333A72', '#4E4A7C']);
   layer(key, -400, -400, 2720, 1880, () => {
@@ -2141,9 +2142,9 @@ function greenTrain(x, y, t, d) {                  // x = front of the train, y 
 function postBox(x, y) {
   wcRect('pbbody', x - 70, y - 300, 140, 300, '#1E6A40', { a: .16, spread: .02, edge: .45, mul: false });
   wcAt('pbcap', UNIT(20), '#1A5A38', x, y - 300, 84, { sy: .35, a: .16, mul: false });
-  wcRect('pbslot', x - 44, y - 250, 88, 12, '#0A2014', { a: .2 });
+  ctx.fillStyle = '#0E2418'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 44, y - 252, 88, 12, 5) : ctx.rect(x - 44, y - 252, 88, 12); ctx.fill();
   wcAt('pbmark', UNIT(12), '#E8C040', x, y - 170, 22, { a: .16, mul: false });
-  wcRect('pbfoot', x - 80, y - 14, 160, 16, '#153A28', { a: .16 });
+  ctx.fillStyle = '#153A28'; ctx.fillRect(x - 78, y - 14, 156, 14);
   glow(x - 40, y - 240, 60, '#FFFFFF', .08);
 }
 const LETTER_FROM = [[200, 300, '#E8762A'], [1720, 360, '#C8322E'], [420, 120, '#7CC3A2'], [1500, 130, '#D9A25A'], [960, 60, '#4A6FB0']];
@@ -2158,11 +2159,16 @@ function postScene(skyK, t, lt) {
     else moonWC(bx, by, 56, { glow: .7 });
   }
   layer('pbwall', -400, 300, 2720, 1200, () => {
-    wcRect('pbw', -400, 380, 2720, 600, '#B4AEA8', { a: .09, spread: .04 });
+    { const g = ctx.createLinearGradient(0, 380, 0, 980); g.addColorStop(0, '#CFC8C0'); g.addColorStop(1, '#B8B0A8'); ctx.fillStyle = g; ctx.fillRect(-400, 380, 2720, 600); }
+    wcRect('pbw', -400, 380, 2720, 600, '#B4AEA8', { a: .025, spread: .04 });
     ctx.fillStyle = '#5A5E6C'; ctx.fillRect(-400, 350, 2720, 44); for (let x = -400; x < 2320; x += 26) limb([[x, 354], [x + 3, 392]], 5, 'rgba(40,44,56,.4)');
     ctx.save(); ctx.globalCompositeOperation = 'multiply'; for (let y = 410, r = 0; y < 980; y += 26, r++) { ctx.strokeStyle = 'rgba(120,112,108,.24)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-400, y); ctx.lineTo(2320, y); for (let x = -400 + (r % 2) * 28; x < 2320; x += 56) { ctx.moveTo(x, y); ctx.lineTo(x, y + 26); } ctx.stroke(); } ctx.restore();
-    for (let i = 0; i < 40; i++) wcAt('pbivy' + i, UNIT(8), i % 2 ? '#5A8A4A' : '#7AA05A', 1300 + hash('iv', i) * 500, 380 + hash('iv', i, 1) * 400, 22, { sy: .7, rot: i, a: .12 });
-    wcRect('pbgrd', -400, 960, 2720, 540, '#C8BCA8', { a: .08, wet: true });
+    // an osmanthus branch leaning over the wall, in flower
+    wcStroke('pbbr', [[1900, 300], [1560, 390], [1300, 430], [1100, 500]], 30, 8, '#4A3A34', { a: .15 });
+    wcStroke('pbbr2', [[1460, 410], [1360, 330], [1250, 310]], 14, 5, '#4A3A34', { a: .15 });
+    for (let i = 0; i < 46; i++) { const u = hash('iv', i), x = lerp(1100, 1800, u), y = lerp(500, 330, u) + (hash('iv', i, 1) - .5) * 130; wcAt('pbivy' + i, UNIT(8), i % 2 ? '#3D7A62' : '#4F8C6C', x, y, 26, { sy: .45, rot: hash('iv', i, 2) * 3, a: .13 }); }
+    for (let i = 0; i < 60; i++) floret(lerp(1100, 1800, hash('pf', i)), lerp(500, 330, hash('pf', i)) + (hash('pf', i, 1) - .5) * 120, 6, i, .95);
+    { const g = ctx.createLinearGradient(0, 960, 0, 1500); g.addColorStop(0, '#CFC4B2'); g.addColorStop(1, '#B8AC98'); ctx.fillStyle = g; ctx.fillRect(-400, 960, 2720, 540); }
   });
   if (skyK > 0) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgba('#3A4288', .55 * skyK); ctx.fillRect(-400, 300, 2720, 1200); ctx.restore(); }
   postBox(960, 970);

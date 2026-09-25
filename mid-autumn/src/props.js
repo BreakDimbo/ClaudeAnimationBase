@@ -34,8 +34,9 @@ function moonWC(x, y, r, o = {}) {
   wcGlow(x, y, r * 1.35, '#FFF3D0', .3 * (o.glow ?? 1));
   wcAt('moon-body', UNIT(28), '#FBEFC8', x, y, r, { opaque: true, a: .2, layers: 12, spread: .12 });
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * .98, 0, TAU); ctx.clip();
-  wcAt('moon-wash1', UNIT(18), MOON, x - r * .15, y - r * .1, r * .85, { a: .06, spread: .5, wet: true });
-  wcAt('moon-wash2', UNIT(14), '#EFC870', x + r * .3, y + r * .25, r * .5, { a: .05, spread: .6, wet: true });
+  wcAt('moon-wash1', UNIT(18), MOON, x - r * .1, y - r * .05, r * .9, { a: .03, spread: .35, wet: true });
+  wcAt('moon-wash2', UNIT(14), '#EFC870', x + r * .3, y + r * .25, r * .45, { a: .025, spread: .5, wet: true });
+  { const g = ctx.createRadialGradient(x - r * .3, y - r * .3, r * .1, x, y, r); g.addColorStop(0, 'rgba(255,252,236,.35)'); g.addColorStop(1, 'rgba(255,252,236,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
   ctx.globalAlpha = .12;
   wcAt('moon-tree', UNIT(12), '#D8A860', x + r * .28, y - r * .12, r * .3, { a: .1, spread: .7, gran: .2 });
   ctx.restore();
@@ -107,12 +108,12 @@ function osmanthusWC(key, x, y, s, t, grow = 1) {
   if (grow <= 0) return;
   ctx.save();
   ctx.beginPath(); ctx.rect(x - s * 1.5, y - s * 1.7 * grow - 10, s * 3, s * 1.7 * grow + 40); ctx.clip();
-  wcStroke(key + 'trunk', [[x, y], [x - s * .04, y - s * .4], [x + s * .05, y - s * .75]], s * .12, s * .05, '#6B4A3A', { a: .14 });
-  wcStroke(key + 'br1', [[x - s * .02, y - s * .45], [x - s * .28, y - s * .72], [x - s * .45, y - s * .82]], s * .05, s * .015, '#6B4A3A', { a: .14 });
-  wcStroke(key + 'br2', [[x + s * .03, y - s * .58], [x + s * .3, y - s * .85], [x + s * .5, y - s * .9]], s * .045, s * .015, '#6B4A3A', { a: .14 });
+  wcStroke(key + 'trunk', [[x, y], [x - s * .04, y - s * .4], [x + s * .05, y - s * .75]], s * .12, s * .05, '#3E2C2C', { a: .16, mul: false });
+  wcStroke(key + 'br1', [[x - s * .02, y - s * .45], [x - s * .28, y - s * .72], [x - s * .45, y - s * .82]], s * .05, s * .015, '#3E2C2C', { a: .16, mul: false });
+  wcStroke(key + 'br2', [[x + s * .03, y - s * .58], [x + s * .3, y - s * .85], [x + s * .5, y - s * .9]], s * .045, s * .015, '#3E2C2C', { a: .16, mul: false });
   const cl = [[0, -1.08, .42], [-.38, -.9, .34], [.38, -.94, .36], [-.14, -1.34, .3], [.22, -1.32, .3], [-.55, -.7, .24], [.58, -.72, .25]];
-  cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leaf' + i, UNIT(14), i % 2 ? '#4F8C6C' : '#3D7A62', x + dx * s, y + dy * s, r * s, { sy: .82, a: .085, spread: .55, edge: .3 }); });
-  cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leafL' + i, UNIT(10), '#9CC98A', x + dx * s - r * s * .25, y + dy * s - r * s * .25, r * s * .5, { sy: .7, a: .07, spread: .6, wet: true }); });
+  cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leaf' + i, UNIT(14), i % 2 ? '#2E4E44' : '#26443C', x + dx * s, y + dy * s, r * s, { sy: .82, a: .12, spread: .5, edge: .3, mul: false }); });
+  cl.forEach(([dx, dy, r], i) => { wcAt(key + 'leafL' + i, UNIT(10), '#5E8468', x + dx * s - r * s * .25, y + dy * s - r * s * .25, r * s * .5, { sy: .7, a: .07, spread: .6, wet: true, mul: false }); });
   for (let i = 0; i < 120; i++) {
     const c = cl[i % cl.length], a = hash(key, i) * TAU, rr = Math.sqrt(hash(key, i, 1)) * c[2] * s * .85;
     floret(x + c[0] * s + Math.cos(a) * rr, y + c[1] * s + Math.sin(a) * rr * .8, s * .009 + 2, i + t * .3, .8);

@@ -10,9 +10,9 @@ function xaWall() {
     wc('xat-r1', [[tx - 420, 260], [tx + 420, 260], [tx + 360, 200], [tx - 360, 200]], '#241E36', { a: .14, spread: .04 });
     wc('xat-r2', [[tx - 380, 200], [tx + 380, 200], [tx + 300, 120], [tx + 250, 60], [tx - 250, 60], [tx - 300, 120]], '#241E36', { a: .14, spread: .04 });
     // the wall: merlons, face, brick courses
-    { const g = ctx.createLinearGradient(0, 560, 0, 1400); g.addColorStop(0, '#4A3E52'); g.addColorStop(1, '#2A2436'); ctx.fillStyle = g; ctx.fillRect(-700, 560, 4600, 840); }
+    { const g = ctx.createLinearGradient(0, 560, 0, 1400); g.addColorStop(0, '#6A5664'); g.addColorStop(.5, '#4A3C4E'); g.addColorStop(1, '#2A2436'); ctx.fillStyle = g; ctx.fillRect(-700, 560, 4600, 840); }
     wcRect('xa-face', -700, 560, 4600, 840, '#6A5A6A', { a: .05, spread: .03 });
-    for (let x = -700; x < 3900; x += 84) wcRect('xa-mer' + x, x, 500, 54, 64, '#5A4A5A', { a: .1, spread: .04 });
+    for (let x = -700; x < 3900; x += 84) wcRect('xa-mer' + x, x, 500, 54, 64, '#6A5A6A', { a: .14, spread: .04, mul: false });
     ctx.save(); ctx.globalCompositeOperation = 'multiply';
     for (let y = 580, r = 0; y < 1400; y += 30, r++) { ctx.strokeStyle = 'rgba(40,30,50,.28)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-700, y); ctx.lineTo(3900, y); for (let x = -700 + (r % 2) * 32; x < 3900; x += 64) { ctx.moveTo(x, y); ctx.lineTo(x, y + 30); } ctx.stroke(); }
     ctx.restore();
@@ -20,7 +20,7 @@ function xaWall() {
     XA_LAN.forEach((x, i) => limb([[x, 568], [x, 598]], 2, 'rgba(30,20,30,.7)'));
   });
 }
-function xaLanterns(lit, t) { XA_LAN.forEach((x, i) => lanternWC(x, 640, 40, lit(i, x), Math.sin(t * 1.3 + i * .7) * .04, 'xal' + i)); }
+function xaLanterns(lit, t) { XA_LAN.forEach((x, i) => { const l = lit(i, x); if (l > 0) glow(x, 700, 220, '#FF9A50', .22 * l); lanternWC(x, 640, 40, l, Math.sin(t * 1.3 + i * .7) * .04, 'xal' + i); }); }
 function bellTower(key) {
   bandsL(key + 's', -400, -400, 2720, 1880, ['#141A42', '#1F2658', '#333A72', '#4E4A7C']);
   layer(key, -400, -400, 2720, 1880, () => {
