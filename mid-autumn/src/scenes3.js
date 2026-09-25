@@ -518,32 +518,23 @@ function S9(lt, t) {
 
 // ═════════ 镜10 纸 (172–180) ═════════
 function S10(lt, t) {
-  lt *= 8 / 7;                                    // (seven seconds, paced as eight)
   camBegin(960, 470, 1.6);
   const board = 1 - ease(seg(lt, .2, 2.2)), chars = 1 - ease(seg(lt, 1.6, 3));
   if (board > 0) { ctx.save(); ctx.globalAlpha = board; wcRect('p-frame', PLAQUE.x - 12, PLAQUE.y - 10, PLAQUE.w + 24, PLAQUE.h + 20, '#B98A3A', { a: .14, spread: .05, edge: .4 }); wcRect('p-board', PLAQUE.x, PLAQUE.y, PLAQUE.w, PLAQUE.h, '#26283A', { a: .2, spread: .04, mul: false }); ctx.restore(); }
   wcGlow(960, 434, 500, '#FFE8B0', .25 * (1 - seg(lt, 3, 6)));
   plaqueChars('pl', 1, { dim: board > .05, glow: false, except: 'ri', exceptA: 0, fade: chars });
-  const riA = 1 - seg(lt, 5.4, 6.4);
+  const riA = 1 - seg(lt, 5, 5.8);
   if (riA > 0) glyph('pl', '阳', 1024, PLAQUE.cy, PLAQUE.size, 1, { only: 'ri', dim: board > .05, glow: false, fade: riA });
   const dk = seg(lt, 3.4, 4.6), bx = 1024 + 16 * .84, y0 = PLAQUE.cy + 40;
   if (lt > 3.2 && dk < 1) { const s = lt < 3.4 ? seg(lt, 3.2, 3.4) : 1; drop(bx, lerp(y0, 700, easeIn(dk)), 7 * s, t, { sy: 1.3, glowA: .2 }); }
   if (dk >= 1) { wcBloom('p-bloom', bx, 700, 90, GOLD, seg(lt, 4.6, 5.6), { a: .07 }); glow(bx, 700, 160, '#FFD27A', .3 * seg(lt, 4.6, 5.4) * (1 - seg(lt, 6.4, 8))); drop(bx, 690, 12, t, { glowA: .2 }); }
   camEnd();
-  paperCover(ease(seg(lt, 6, 8)));
+  paperCover(ease(seg(lt, 5.2, 6.1)));
 }
 
-const SHOTS = [
-  [0, S1, '向阳门第·晨'],
-  [14, S2, '北京', { d: .8, type: 'dissolve' }],
-  [32, S5, '包头', { d: .8, type: 'dissolve' }],
-  [50, S6, '呼和浩特', { d: .8, type: 'dissolve' }],
-  [68, S3, '西安'],
-  [86, S4, '新加坡', { d: 1.4, type: 'ripple', x: 960, y: 177 }],
-  [104, S7, '从前慢'],
-  [128, S8, '向阳门第·夜', { d: .8, type: 'dissolve' }],
-  [152, S9, '背影·赏月', { d: 1, type: 'dissolve' }],
-  [173, S10, '纸', { d: 1, type: 'dissolve' }],
+const SHOTS = [                                   // (the transitions between cuts are designed in main.js EDIT)
+  [0, S1, '向阳门第·晨'], [14, S2, '北京'], [32, S5, '包头'], [50, S6, '呼和浩特'], [68, S3, '西安'],
+  [86, S4, '新加坡'], [104, S7, '从前慢'], [128, S8, '向阳门第·夜'], [152, S9, '背影·赏月'], [173, S10, '纸'],
 ];
 VIEWS.cast = (t) => { Object.keys(ROLE).forEach((r, i) => puppet(r, 'back', 120 + i * 112, 1000, 700, { t })); };
 VIEWS.mains = (t) => { const R = ['daidai', 'erjiumu', 'erjiu', 'lulu', 'wo', 'baba', 'mama', 'laoye', 'laolao', 'doudou', 'daju', 'tongtong', 'sanyifu', 'sanyi', 'rere', 'eryi']; R.forEach((r, i) => puppet(r, 'main', 70 + i * 118, 1000, 560, { t })); };

@@ -21,26 +21,29 @@ function overlayShot(i, t, a) {
   drawShot(i, t); ctx = main; BF = bf;
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = clamp(a); ctx.drawImage(BUF, 0, 0); ctx.restore();
 }
-// ── the cut: the shots are written on the 180 s storyboard timeline; the film plays chosen stretches of it,
-// each at its own pace, in 120 s. [story start, story end, film seconds]
+// ── the cut: the shots are written on the 180 s storyboard timeline. The film is 47 cuts taken from it at normal
+// speed, each chosen around its one event, with a transition designed for every join.
+// [story in, story out, how it arrives: null = cut, or [type, seconds] (dissolve | ripple)]
+const RIPPLE_AT = [960, 177];
 const EDIT = [
-  [0, 14, 10.5],                                   // 镜1 向阳门第·晨
-  [14, 20, 5], [23, 26, 2.6], [29, 32, 2.6],       // 镜2 北京 (the persimmons ripening and the dagoba are cut)
-  [32, 35, 2.4], [38, 50, 9.6],                    // 镜3 包头 (the deer drinking is cut)
-  [50, 59, 7.2], [62, 68, 4.8],                    // 镜4 呼和浩特 (the moon sliding in is cut)
-  [68, 74, 4.8], [77, 86, 7.4],                    // 镜5 西安 (the bell tower is cut)
-  [86, 92, 4.6], [95, 104, 7.2],                   // 镜6 新加坡 (the frangipani is cut)
-  [104, 107, 2.2], [107, 116, 5.2], [116, 128, 7.9],   // 镜7 从前慢
-  [128, 131, 2.2], [134, 140, 4.8], [143, 152, 7.2],   // 镜8 夜 (the cranes landing and the floret are cut)
-  [152, 173, 16.1],                                // 镜9 背影 · 赏月 · 团圆
-  [173, 180, 5.7],                                 // 镜10 纸
+  [0, 3.3], [3.3, 7.45], [9.45, 11.5], [11.5, 13.6],                                                            // 镜1 向阳门第·晨
+  [14.0, 16.6, ['dissolve', .7]], [17.5, 20.0], [21.0, 22.8], [23.3, 25.6], [29.2, 32.0, ['dissolve', .5]],       // 镜2 北京
+  [32.0, 34.6, ['dissolve', .8]], [38.5, 40.5], [41.3, 44.0], [44.0, 46.4], [47.3, 49.4],                         // 镜3 包头
+  [50.0, 52.4, ['dissolve', .8]], [53.2, 55.6], [56.4, 58.8], [59.8, 62.2], [66.0, 68.0],                         // 镜4 呼和浩特
+  [68.2, 70.4], [71.2, 73.8], [77.5, 79.8], [80.8, 83.0], [83.8, 85.8],                                           // 镜5 西安
+  [86.4, 88.8, ['ripple', 1.2]], [89.4, 91.8], [95.6, 97.8], [98.4, 100.6], [101.0, 103.2],                       // 镜6 新加坡
+  [104.3, 106.5, ['dissolve', .5]], [107.4, 109.4], [113.6, 115.8, ['dissolve', .4]], [116.9, 120.4], [123.0, 124.8], [126.0, 127.8],   // 镜7 从前慢
+  [128.6, 131.0, ['dissolve', .8]], [134.8, 137.2], [137.4, 139.6], [143.2, 145.6], [148.0, 151.8],               // 镜8 向阳门第·夜
+  [152.2, 155.0, ['dissolve', 1]], [155.4, 158.8], [159.2, 162.0], [162.0, 164.0], [164.3, 169.2], [170.5, 172.4], // 镜9 背影 · 赏月 · 团圆
+  [173.6, 179.4, ['dissolve', 1]],                                                                                // 镜10 纸
 ];
-const EDIT_AT = []; { let f = 0; for (const [a, b, d] of EDIT) { EDIT_AT.push([a, b, f, f + d]); f += d; } }
+const EDIT_AT = []; { let f = 0; for (const [a, b, into] of EDIT) { EDIT_AT.push({ a, b, f0: f, f1: f + (b - a), into: into || null }); f += b - a; } }
+function clipAt(T) { let i = 0; while (i < EDIT_AT.length - 1 && T >= EDIT_AT[i].f1) i++; return i; }
 // film time → story time
-function toStory(T) { for (const [a, b, f0, f1] of EDIT_AT) if (T < f1) return lerp(a, b, clamp((T - f0) / (f1 - f0))); return STORY - 1e-4; }
-// story time → film time; inside a cut stretch: null, or (collapse) the nearest cut point
+function toStory(T) { const c = EDIT_AT[clipAt(T)]; return Math.min(c.b, c.a + (T - c.f0)); }
+// story time → film time; outside the cut: null, or (collapse) the start of the next cut
 function toFilm(t, collapse = false) {
-  for (const [a, b, f0, f1] of EDIT_AT) { if (t < a) return collapse ? f0 : null; if (t <= b) return lerp(f0, f1, (t - a) / (b - a)); }
+  for (const c of EDIT_AT) { if (t < c.a) return collapse ? c.f0 : null; if (t <= c.b) return c.f0 + (t - c.a); }
   return collapse ? DUR : null;
 }
 window.toStory = toStory; window.toFilm = toFilm;
@@ -49,15 +52,13 @@ function render(T) {
   T = clamp(T, 0, DUR - 1e-4);
   BF = Math.floor(T * BOIL + 1e-6);
   if (VIEW) { paperUnder(); VIEW(T); grainOver(); return; }
-  const t = toStory(T);
-  const i = shotAt(t), nx = SHOT_LIST[i + 1];
-  drawShot(i, t);
-  if (nx && nx.into && t > nx.start - nx.into.d) {          // the next shot arriving early: a dissolve or a ripple
-    const k = seg(t, nx.start - nx.into.d, nx.start);
-    if (nx.into.type === 'ripple') {
-      const main = ctx, bf = BF; ctx = BUF.getContext('2d'); drawShot(i + 1, t); ctx = main; BF = bf;
-      circleReveal('into' + i, nx.into.x, nx.into.y, lerp(0, 1400, easeIn(k)), () => ctx.drawImage(BUF, 0, 0), '#E8F2F4');
-    } else overlayShot(i + 1, t, ease(k));
+  const ci = clipAt(T), c = EDIT_AT[ci], nx = EDIT_AT[ci + 1], t = toStory(T);
+  drawShot(shotAt(t), t);
+  if (nx && nx.into && T > nx.f0 - nx.into[1]) {                 // the next cut arriving: it starts early and is laid over this one
+    const d = nx.into[1], k = seg(T, nx.f0 - d, nx.f0), tn = nx.a - (nx.f0 - T);
+    const main = ctx, bf = BF; ctx = BUF.getContext('2d'); drawShot(shotAt(nx.a + 1e-6), tn); ctx = main; BF = bf;   // (the incoming shot, running into its first frame)
+    if (nx.into[0] === 'ripple') circleReveal('into' + ci, RIPPLE_AT[0], RIPPLE_AT[1], lerp(0, 1400, easeIn(k)), () => ctx.drawImage(BUF, 0, 0), '#E8F2F4');
+    else { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = ease(k); ctx.drawImage(BUF, 0, 0); ctx.restore(); }
   }
   grainOver();
 }

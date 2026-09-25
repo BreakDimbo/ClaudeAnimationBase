@@ -294,8 +294,8 @@ function sunbeam(x, a = 1) {
   ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 220 + 300, -300); ctx.lineTo(x + 220 + 300, -300); ctx.lineTo(x + 220 - 500, 1300); ctx.lineTo(x - 220 - 500, 1300); ctx.closePath(); ctx.fill();
   ctx.restore();
 }
-const LIGHT_AT = [4.5, 6.6, 7.4, 8.2];            // 向 阳 门 第 turn gold (s), as the rabbit reaches each one
-const S1_HOPS = [[2.7, 960, 206], [3.7, 1210, 372], [4.4, 1150, 372], [6.5, 1024, 372], [7.3, 897, 372], [8.1, 770, 372], [9.7, 1110, 910], [10.7, 1040, 936]];
+const LIGHT_AT = [4.5, 5.3, 6.1, 6.9];            // 向 阳 门 第 turn gold (s), as the rabbit reaches each one
+const S1_HOPS = [[2.7, 960, 206], [3.7, 1210, 372], [4.4, 1150, 372], [5.2, 1024, 372], [6.0, 897, 372], [6.8, 770, 372], [9.7, 1110, 910], [10.7, 1040, 936]];
 function s1Rabbit(lt, t) {
   if (lt < 1.3) return;
   if (lt < 2.7) { const k = seg(lt, 1.3, 2.7), [x, y] = arcPt([230, 190], [960, 206], 110, ease(k)); for (let i = 1; i < 6; i++) { const [tx, ty] = arcPt([230, 190], [960, 206], 110, ease(clamp(k - i * .04))); wcGlow(tx, ty - 10, 24, '#FFF4D0', .12); } bunny(x, y, 50, t, { glow: .3, air: .25 + .5 * k }); return; }

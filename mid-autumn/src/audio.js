@@ -94,7 +94,7 @@ function buildAudio(sr = 44100) {
   // ── the score ──
   const BEAT = .75, BAR = 3;
   // sections in film time (the shots' boundaries after the cut)
-  const SEC = [[0, 'dawn'], [10.5, 'beijing'], [20.7, 'baotou'], [32.7, 'hohhot'], [44.7, 'xian'], [56.9, 'sg'], [68.7, 'slow'], [84, 'night'], [98.2, 'home'], [114.3, 'paper']];
+  const SEC = [[0, 'dawn'], [14, 'beijing'], [32, 'baotou'], [50, 'hohhot'], [68, 'xian'], [86, 'sg'], [104, 'slow'], [128, 'night'], [152, 'home'], [173, 'paper']].map(([st, n]) => [toFilm(st, true), n]);
   const secAt = t => { let s = SEC[0][1]; for (const [a, n] of SEC) if (t >= a - 1e-6) s = n; return s; };
   const PROG = {                                   // one chord a bar: [root, third, fifth] (midi)
     dawn: [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]], beijing: [[62, 66, 69], [55, 59, 62], [62, 66, 69], [57, 61, 64]],
@@ -144,10 +144,11 @@ function buildAudio(sr = 44100) {
   }
   // the ending: sixteen notes rising as the faces light, the family-photo chord, one long note on the paper
   FACES.forEach(({ x }, i) => { const u = (x - 360) / (1500 - 360); if (u >= 0 && u <= 1) pluck(ev(164 + 6.5 * u), mtof(62 + PENT[i % 5] + 12 * Math.floor(i / 5)), .09, (u - .5) * 1.2, 2.6, .6); });
-  [62, 69, 74, 78, 81].forEach((m, i) => pluck(112.4 + i * .06, mtof(m), .12, (i - 2) * .3, 4, .55));
-  pad(112.4, 117, [50, 57, 62, 66, 69], .02, 0, 1.2);
-  bell(115.8, mtof(86), .06, 0, 3.2);
-  pluck(116, mtof(62), .18, 0, 3.2, .5); pad(116, 120, [50, 62, 69], .02, 0, 1);
+  const photo = toFilm(170.5, true), drop = toFilm(177, true);
+  [62, 69, 74, 78, 81].forEach((m, i) => pluck(photo + i * .06, mtof(m), .12, (i - 2) * .3, 4, .55));
+  pad(photo, photo + 4.6, [50, 57, 62, 66, 69], .02, 0, 1.2);
+  bell(drop - .2, mtof(86), .06, 0, 3.2);
+  pluck(drop, mtof(62), .18, 0, 3.2, .5); pad(drop, DUR, [50, 62, 69], .02, 0, 1);
 
   // ── the scenes' sounds (storyboard times) ──
   // 镜1: the rabbit leaves the moon, the characters turn gold, the letter, the crane
