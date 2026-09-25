@@ -1,7 +1,7 @@
 // ───────────────────────── main: render(t), the timeline, preview player, export hooks ─────────────────────────
 // SHOTS: [start, fn(lt, t, dur)] from scenes.js; each shot paints the whole frame.
 const SHOT_LIST = SHOTS.map((s, i) => ({ start: s[0], end: i + 1 < SHOTS.length ? SHOTS[i + 1][0] : DUR, fn: s[1], name: s[2] || '' }));
-makePaper();
+makeWCPaper();
 let VIEW = null;           // a test view (?view=cast) instead of the film
 function shotAt(t) { let i = SHOT_LIST.length - 1; while (i > 0 && t < SHOT_LIST[i].start) i--; return i; }
 // draw one shot at video time t into the current ctx (used by dissolves too)
@@ -65,5 +65,4 @@ btn.addEventListener('click', async () => {
   const loop = () => { if (!playing) return; const t = tStart + actx.currentTime - t0Wall; if (t >= DUR) { stop(); show(DUR - .01); return; } show(t); requestAnimationFrame(loop); };
   requestAnimationFrame(loop);
 });
-show(+(q.get('t') || 0));
-window.ready = true;
+loadSprites().then(() => { show(+(q.get('t') || 0)); window.ready = true; });

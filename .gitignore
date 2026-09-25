@@ -1,3 +1,6 @@
 node_modules
 out/
 mid-autumn/build/
+mid-autumn/sprites/
+mid-autumn/refs/
+mid-autumn/cards/
