@@ -420,19 +420,19 @@ function familyBacks(lt, t, o = {}) {
   BACKS.forEach(({ role, x }, i) => {
     let dy = 0, rot = 0, dx = 0;
     if (role === 'rere') dy = -Math.max(0, Math.sin(seg(lt, 4, 4.8) * Math.PI)) * 18;
-    if (role === 'lulu') { const k = ease(seg(lt, 7.2, 8.4)); rot = -.05 * k; dx = -8 * k; }
-    if (role === 'wo') rot = .012 * ease(seg(lt, 7.8, 8.6));
+    if (role === 'lulu') { const k = ease(seg(lt, 5.6, 6.6)); rot = -.05 * k; dx = -8 * k; }
+    if (role === 'wo') rot = .012 * ease(seg(lt, 6.1, 6.9));
     puppet(role, 'back', x + dx, 1190 + (i % 2) * 14, 560, { t, rot, dy, alpha: o.alpha ?? 1, tint: ['#1A2050', .28], light: ['#FFF0C0', .25], shadow: false });
   });
 }
-// the rabbit in front of the family; at the end it hops up a moonbeam and back into the moon
+// the rabbit in front of the family; then it hops up a moonbeam and back into the moon
 function s9Rabbit(lt, t) {
-  if (lt < 12) { const back = lt > 10.2 && lt < 11.2; bunny(960, 1072, 70, t, { flip: back, glow: .3 }); return; }
-  if (lt > 15.8) return;
-  const K = [[12.3, 1320, 800], [12.9, 1250, 740], [13.5, 1180, 690], [14.1, 1110, 640], [14.7, 1040, 600], [15.3, 970, 560], [15.8, 900, 510]];
-  const p = hopPath(lt, K, 40, .45), sz = lerp(62, 20, seg(lt, 12.3, 15.8));
-  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,240,200,.08)'; ctx.lineWidth = 60; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(1400, 860); ctx.lineTo(890, 500); ctx.stroke(); ctx.restore();
-  bunnyAt(p, sz, t, { flip: true, glow: .35, alpha: 1 - seg(lt, 15.5, 15.8) });
+  if (lt < 7) { bunny(960, 1072, 70, t, { glow: .3 }); return; }
+  if (lt > 10.8) return;
+  const K = [[7.3, 1320, 800], [7.9, 1250, 740], [8.5, 1180, 690], [9.1, 1110, 640], [9.7, 1040, 600], [10.3, 970, 560], [10.8, 900, 510]];
+  const p = hopPath(lt, K, 40, .45), sz = lerp(62, 20, seg(lt, 7.3, 10.8));
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,240,200,${.08 * seg(lt, 7, 7.5)})`; ctx.lineWidth = 60; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(1400, 860); ctx.lineTo(890, 500); ctx.stroke(); ctx.restore();
+  bunnyAt(p, sz, t, { flip: true, glow: .35, alpha: 1 - seg(lt, 10.5, 10.8) });
 }
 function moonCourt(t, o = {}) {
   bandsL('mcsky', -400, -300, 2720, 1800, ['#0E1438', '#18204C', '#262E62', '#3A3C70'], .08);
@@ -445,54 +445,75 @@ function moonCourt(t, o = {}) {
     wcRect('mcstep', -400, 1000, 2720, 500, '#3A3A5A', { a: .1, wet: true });
   });
 }
+// the reverse angle, as the moon sees them: sixteen faces in its light, by family (mirrored: their left is our right)
+const FACES = []; { let x = 98; [...FAMILY].reverse().forEach(f => { [...f].reverse().forEach(r => { FACES.push({ role: r, x }); x += 104; }); x += 28; }); }
+function facesCourt(t, camX, o = {}) {
+  bandsL('fcsky', -400, -300, 2720, 900, ['#10163E', '#1C2454', '#2C3468']);
+  stars('fcst', 60, -400, -300, 2720, 500, t, .7);
+  layer('fcyard', -400, 150, 2720, 1300, () => {
+    ctx.fillStyle = '#20243A'; ctx.fillRect(-400, 300, 2720, 34);
+    const g = ctx.createLinearGradient(0, 330, 0, 820); g.addColorStop(0, '#3E4064'); g.addColorStop(1, '#30304E'); ctx.fillStyle = g; ctx.fillRect(-400, 330, 2720, 500);
+    wcRect('fcwall', -400, 330, 2720, 500, '#5A5A7A', { a: .04 });
+    for (const x of [300, 1620]) { const g2 = ctx.createRadialGradient(x, 560, 20, x, 560, 150); g2.addColorStop(0, '#F2C07A'); g2.addColorStop(1, '#7A5A58'); ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(x, 560, 140, 0, TAU); ctx.fill(); }
+    const g3 = ctx.createLinearGradient(0, 820, 0, 1450); g3.addColorStop(0, '#4E4A6A'); g3.addColorStop(1, '#2A2A44'); ctx.fillStyle = g3; ctx.fillRect(-400, 820, 2720, 630);
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = 'rgba(40,40,70,.25)'; ctx.lineWidth = 2; for (let y = 860; y < 1450; y += 44) { ctx.beginPath(); ctx.moveTo(-400, y); ctx.lineTo(2320, y); ctx.stroke(); } ctx.restore();
+  });
+  osmanthusWC('fctree', 1780, 900, 700, t, 1);
+  [[140, 250], [620, 210], [1100, 230], [1560, 260]].forEach(([x, y], i) => { limb([[x, y - 60], [x, y - 36]], 2, 'rgba(30,20,20,.7)'); lanternWC(x, y, 30, 1, Math.sin(t * 1.3 + i) * .05, 'fcl' + i); });
+  // moonlight from in front of them; each face brightens as the camera (the moon's gaze) reaches it
+  FACES.forEach(({ role, x }, i) => {
+    const near = camX === undefined ? .6 : clamp(1 - Math.abs(x - camX) / 380), k = .12 + .3 * ease(near) + (o.all || 0) * .2;
+    puppet(role, 'main', x, 1000 + (i % 2) * 10, 560, { t, tint: ['#1A2050', .22 - .12 * near], light: ['#FFF0C8', Math.min(.55, k)], shadowCol: '#20203A' });
+  });
+  glow(camX ?? 960, 560, 700, '#FFF0C8', .08);
+}
 function S9(lt, t) {
-  if (lt < 3) {                                   // 152–155 a huge moon; the family's backs appear in its light
+  if (lt < 3) {                                   // 152–155 a huge moon; the family's backs appear in its light, the rabbit in front of them
     camBegin(960, 540, 1);
     moonCourt(t);
     familyBacks(lt, t, { alpha: ease(seg(lt, -.4, 2.4)) });
     s9Rabbit(lt, t);
     camEnd();
-  } else if (lt < 9) {                            // 155–161 along the row of backs, family by family (pan right): 热热 rises on tiptoe; 璐璐 leans toward 我
-    const cx = kf(lt, [[3, 420], [9, 1560]], (k) => k);
+  } else if (lt < 7) {                            // 155–159 along the row of backs, family by family: 热热 rises on tiptoe; 璐璐 leans toward 我
+    const cx = kf(lt, [[3, 420], [7, 1560]], k => k);
     camBegin(cx, 700, 1.6);
     moonCourt(t);
     familyBacks(lt, t);
     s9Rabbit(lt, t);
     camEnd();
-  } else if (lt < 12) {                           // 161–164 everyone; osmanthus florets drift down over their shoulders
-    camBegin(960, 540, 1);
-    moonCourt(t);
-    familyBacks(lt, t);
-    floretRain('s9fl', 0, 1920, -100, 1100, 40, t, { s: 9 });
-    s9Rabbit(lt, t);
-    camEnd();
-  } else if (lt < 15) {                           // 164–167 the moon: the five cities' colours surface inside it (slow push)
-    const z = kf(lt, [[12, 1.3], [15, 1.5]], ease);
-    camBegin(960, 420, z);
+  } else if (lt < 10) {                           // 159–162 the rabbit hops up a moonbeam (slow push)
+    const z = kf(lt, [[7, 1.3], [10, 1.45]], ease);
+    camBegin(960, 440, z);
     moonCourt(t);
     floretRain('s9fl2', 200, 1720, -100, 1100, 18, t, { s: 9 });
     s9Rabbit(lt, t);
     camEnd();
-  } else if (lt < 18) {                           // 167–170 the rabbit hops into the moon: its shape is back, the five cities' colours surface
+  } else if (lt < 12) {                           // 162–164 into the moon: its rabbit is back, the five cities' colours surface
     camBegin(960, 480, 1.25);
-    MOONRAB = ease(seg(lt, 15.8, 16.8));
-    moonCourt(t, { colours: .5 * ease(seg(lt, 16.2, 17.8)) });
+    MOONRAB = ease(seg(lt, 10.8, 11.6));
+    moonCourt(t, { colours: .5 * ease(seg(lt, 11, 12)) });
     s9Rabbit(lt, t);
-    const f = seg(lt, 15.7, 16.6); if (f > 0 && f < 1) glow(890, 505, 260 * f + 20, '#FFF6D8', .6 * Math.sin(f * Math.PI));
+    const f = seg(lt, 10.7, 11.5); if (f > 0 && f < 1) glow(890, 505, 260 * f + 20, '#FFF6D8', .6 * Math.sin(f * Math.PI));
     camEnd();
-  } else {                                        // 170–172 pull back; the moonlight brightens into a gold wash
-    const z = kf(lt, [[18, 1.25], [20, 1]], ease);
-    camBegin(960, 540, z);
-    MOONRAB = 1;
-    moonCourt(t, { colours: .5 });
-    familyBacks(lt, t);
+  } else if (lt < 18.5) {                         // 164–170.5 the reverse angle, from the moon: along the sixteen faces (pan right)
+    const cx = kf(lt, [[12, 360], [18.5, 1500]], k => k * k * (3 - 2 * k) * .25 + k * .75);
+    camBegin(cx, 600, 1.85);
+    facesCourt(t, cx);
+    floretRain('s9fl3', cx - 700, cx + 700, 200, 1100, 26, t, { s: 7 });
     camEnd();
-    fillScreen('#F8E4B0', .6 * ease(seg(lt, 18.2, 20)));
+  } else {                                        // 170.5–173 all of them together, like a family photo (pull back); the moonlight turns to gold
+    const z = kf(lt, [[18.5, 1.35], [21, 1]], ease);
+    camBegin(960, 560, z);
+    facesCourt(t, undefined, { all: seg(lt, 18.5, 20) });
+    floretRain('s9fl4', 0, 1920, -100, 1100, 44, t, { s: 8 });
+    camEnd();
+    fillScreen('#F8E4B0', .5 * ease(seg(lt, 19.6, 21)));
   }
 }
 
 // ═════════ 镜10 纸 (172–180) ═════════
 function S10(lt, t) {
+  lt *= 8 / 7;                                    // (seven seconds, paced as eight)
   camBegin(960, 470, 1.6);
   const board = 1 - ease(seg(lt, .2, 2.2)), chars = 1 - ease(seg(lt, 1.6, 3));
   if (board > 0) { ctx.save(); ctx.globalAlpha = board; wcRect('p-frame', PLAQUE.x - 12, PLAQUE.y - 10, PLAQUE.w + 24, PLAQUE.h + 20, '#B98A3A', { a: .14, spread: .05, edge: .4 }); wcRect('p-board', PLAQUE.x, PLAQUE.y, PLAQUE.w, PLAQUE.h, '#26283A', { a: .2, spread: .04, mul: false }); ctx.restore(); }
@@ -517,6 +538,7 @@ const SHOTS = [
   [104, S7, '从前慢'],
   [128, S8, '向阳门第·夜', { d: .8, type: 'dissolve' }],
   [152, S9, '背影·赏月', { d: 1, type: 'dissolve' }],
-  [172, S10, '纸', { d: 1, type: 'dissolve' }],
+  [173, S10, '纸', { d: 1, type: 'dissolve' }],
 ];
 VIEWS.cast = (t) => { Object.keys(ROLE).forEach((r, i) => puppet(r, 'back', 120 + i * 112, 1000, 700, { t })); };
+VIEWS.mains = (t) => { const R = ['daidai', 'erjiumu', 'erjiu', 'lulu', 'wo', 'baba', 'mama', 'laoye', 'laolao', 'doudou', 'daju', 'tongtong', 'sanyifu', 'sanyi', 'rere', 'eryi']; R.forEach((r, i) => puppet(r, 'main', 70 + i * 118, 1000, 560, { t })); };
