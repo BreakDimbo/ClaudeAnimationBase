@@ -27,7 +27,8 @@ def cut(rgb, box, keep=1):
         if i in edge_ids: continue
         m = lab == i
         a = m.sum()
-        if a > 250 and d[m].mean() < 10: bgm |= m
+        # only flat, untextured paper counts as a hole (cream clothing carries pencil texture)
+        if a > 250 and d[m].mean() < 9 and c[m].std(0).mean() < 3.5: bgm |= m
     fg = ~bgm
     fg = ndi.binary_opening(fg, iterations=1)
     lab, n = ndi.label(fg)

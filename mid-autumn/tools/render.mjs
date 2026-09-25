@@ -26,7 +26,7 @@ if (args.encode) {
   process.exit(0);
 }
 
-const browser = await chromium.launch({ args: ['--no-sandbox', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });
+const browser = await chromium.launch({ args: ['--no-sandbox', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 async function openPage(tag = '') {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   page.on('console', m => { if (['error', 'warning'].includes(m.type())) console.log(`[page${tag}]`, m.text()); });

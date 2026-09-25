@@ -8,7 +8,7 @@ function shotAt(t) { let i = SHOT_LIST.length - 1; while (i > 0 && t < SHOT_LIST
 function drawShot(i, t) {
   const s = SHOT_LIST[i];
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  paperUnder(); LIGHT = null; LIGHTK = 0;
+  paperUnder(); LIGHT = null; LIGHTK = 0; ambient(null);
   s.fn(t - s.start, t, s.end - s.start);
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }

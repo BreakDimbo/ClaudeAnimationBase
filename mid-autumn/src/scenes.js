@@ -46,6 +46,7 @@ function S1(lt, t) {
 
 // ═════════ 镜2 二舅 · 二舅妈 · 袋袋 (10–22) · 淡蓝 ═════════
 function S2(lt, t) {
+  ambient(['#9DB6DC', .1], ['#FFF4E0', .12]);
   const blue = ['#AFC6E6', '#C8D8EC', '#E6EDF2'];
   if (lt < 3) {                                   // 10–13 the drop rolls in and bounces at 袋袋's feet
     camBegin(960, 540, 1);
@@ -102,6 +103,7 @@ function riverBG(key) {
   });
 }
 function S3(lt, t) {
+  ambient(['#6F7FB8', .14], ['#DDE4FF', .1]);
   const KEYS = 6, keyX = i => 620 + i * 190, keyY = 880;
   if (lt < 7) {                                   // 22–25 the boat drifts in (pan); 25–29 his stripes become keys
     const cx = lt < 3 ? kf(lt, [[0, 420], [3, 960]], easeOut) : 960;
@@ -147,6 +149,7 @@ function S3(lt, t) {
 
 // ═════════ 镜4 大舅 & 兜兜 (34–46) · 红白灰 ═════════
 function S4(lt, t) {
+  ambient(['#B8B8C8', .08], ['#FFF6EE', .12]);
   const grey = ['#C8C8D2', '#DEDDE2', '#EFE9E2'];
   const birds = (lt0) => { for (let i = 0; i < 14; i++) { const k = seg(lt, lt0 + i * .08, lt0 + 2.4 + i * .08); if (k <= 0) continue; const sx = 1080 + (hash('s4b', i) - .5) * 70, sy = 820 + hash('s4b', i, 1) * 200; const [x, y] = arcPt([sx, sy], [1300 + (hash('s4b', i, 2) - .5) * 360, 260 + hash('s4b', i, 3) * 110], 120, easeOut(k)); houndBird(x, y, 34 + hash('s4b', i, 4) * 18, t * 3 + i * .3, (hash('s4b', i, 5) - .5) * .5); } };
   if (lt < 10) {
@@ -177,6 +180,7 @@ function S4(lt, t) {
 
 // ═════════ 镜5 桐桐 · 三姨 · 三姨夫 (46–58) · 桂花金 ═════════
 function S5(lt, t) {
+  ambient(['#F0B860', .12], ['#FFE2A0', .22]);
   const warm = ['#F3D9A4', '#F6E6C2', '#F2E9D6'];
   const TX = 700;
   const scene = (grow, shift) => {
@@ -220,6 +224,7 @@ function scarfRiver(key, x0, y0, len, grow, t) {
   return P;
 }
 function S6(lt, t) {
+  ambient(['#F2A0B8', .1], ['#FFE8EE', .14]);
   const pink = ['#F6C9D6', '#F9DDE4', '#F4ECE8'];
   if (lt < 3) {                                   // 58–61 二姨's phone lights with sixteen little circles; 热热 beside her
     camBegin(960, 540, 1);
@@ -280,6 +285,7 @@ function lattice(x, y, w, h, cell, a, col = '#2A2A36') {
   ctx.restore();
 }
 function S7(lt, t) {
+  ambient(['#C98A86', .12], ['#FFD9B0', .16]);
   const red = ['#C98A86', '#DDB2A8', '#EBD6C8'];
   if (lt < 3) {                                   // 72–75 a button lifts off her jacket like a small moon
     const z = kf(lt, [[0, 2.4], [3, 1.7]], ease);
@@ -330,6 +336,7 @@ function kitchenBG() {
   });
 }
 function S8(lt, t) {
+  ambient(['#C8D4E4', .07], ['#FFF4E0', .12]);
   const Y = 1000, H0 = 740;
   if (lt < 3) {                                   // 86–89 steam parts: a steamer, a kitchen afloat on clouds
     const z = kf(lt, [[0, 1.5], [3, 1]], ease);
@@ -563,6 +570,7 @@ function S11(lt, t) {
 
 // ═════════ 镜12 茶杯 (168–180) · 纸白 ═════════
 function S12(lt, t) {
+  ambient(['#F4E0C8', .06]);
   if (lt < 8) {                                   // 168–172 the teacup with the moon on the tea; 172–176 a drop runs down the rim (tilt down)
     const cy = lt < 4 ? 540 : kf(lt, [[4, 540], [8, 820]], easeIO);
     camBegin(960, cy, 1);
@@ -590,3 +598,32 @@ const SHOTS = [
   [72, S7, '姥姥姥爷'], [86, S8, '厨房'], [106, S9, '黄昏的路'], [124, S10, '圆桌'], [148, S11, '全家福'], [168, S12, '茶杯'],
 ];
 VIEWS.cast = (t) => { Object.keys(ROLE).forEach((r, i) => puppet(r, 'front', 120 + i * 112, 1000, 700, { t })); };
+
+// ── rig test: 我 and 璐璐 under the osmanthus (6 s). Breathing, a turn of the head, a wave,
+//    she steps in and leans her head on his shoulder, they sway together. ──
+function sampleWoLulu(t) {
+  ambient(['#F0B860', .1], ['#FFE2A0', .2]);
+  camBegin(960, 540, 1);
+  sky('s5sky', ['#F3D9A4', '#F6E6C2', '#F2E9D6'], { ground: '#D8C590', gy: 830, h: 1000 });
+  osmanthusWC('s5tree', 520, 1000, 760, t, 1);
+  const sway = Math.sin(t * 1.3) * .012;
+  // 我: turns his head to her (1.0–1.6), waves the V hand twice (1.2–2.4), leans his head toward hers (3.6–4.4)
+  const look = ease(seg(t, 1.0, 1.6)), wave = seg(t, 1.2, 2.4), toward = ease(seg(t, 3.6, 4.4));
+  const woPose = {
+    root: sway + .025 * toward, spine: .02 * look + .03 * toward,
+    head: .10 * look + .12 * toward + .015 * Math.sin(t * 2.1),
+    upperR: -.06 * Math.sin(wave * Math.PI), foreR: .28 * Math.sin(wave * TAU * 2) * Math.sin(wave * Math.PI),
+  };
+  puppet('wo', 'main', 800, 1060, 960, { t, pose: woPose });
+  // 璐璐: steps in (2.2–3.0), leans and rests her head on his shoulder (2.8–3.6), stays, swaying with him
+  const step = ease(seg(t, 2.2, 3.0)), lean = ease(seg(t, 2.8, 3.6));
+  const luluPose = {
+    rootDx: -190 * step, rootDy: -Math.sin(step * Math.PI) * 10,
+    root: -.035 * lean + sway, spine: -.07 * lean - .01 * Math.sin(t * 1.7),
+    head: -.30 * lean - .02 * Math.sin(t * 2.3),
+  };
+  puppet('lulu', 'main', 1230, 1060, 960, { t, pose: luluPose });
+  floretRain('smpfl', 300, 1500, -100, 1100, 26, t, { s: 9 });
+  camEnd();
+}
+VIEWS.sample = sampleWoLulu;
