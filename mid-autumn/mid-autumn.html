@@ -819,14 +819,15 @@ function S1(lt, t) {
   paperCover(1 - ease(seg(lt, 0, .7)));
 }
 
-// ═════════ 镜2 热热弟弟 (10–22) · 淡蓝 ═════════
+// ═════════ 镜2 热热弟弟 & 桐桐弟弟 (10–22) · 淡蓝 ═════════
 function S2(lt, t) {
   const blue = ['#AFC6E6', '#C8D8EC', '#E6EDF2'];
   if (lt < 3) {                                   // 10–13 the drop rolls in and bounces at his feet
     camBegin(960, 540, 1);
     sky('s2sky', blue, { ground: '#C9D3DF', gy: 820 });
-    puppet('rere', 'main', 1180, 1010, 800, { t });
-    const k = seg(lt, 0, 2.4), x = lerp(-60, 930, easeOut(k)), b = hop(lt, 2.3, 2.75, 70);
+    puppet('rere', 'main', 1000, 1010, 800, { t });
+    puppet('tongtong', 'main', 1400, 1010, 800, { t });
+    const k = seg(lt, 0, 2.4), x = lerp(-60, 760, easeOut(k)), b = hop(lt, 2.3, 2.75, 70);
     drop(x, 975 + b.dy, 24, t, { sx: 1 + b.sq, sy: 1 - b.sq });
     rabbitRun(-200, 560, 1000, 55, lt, .3, 2.6);
     camEnd();
@@ -846,11 +847,13 @@ function S2(lt, t) {
     const smile = seg(lt, 6.2, 6.9);
     if (smile > 0) moonWindow('s2w', 'rere', 'e0', 'e1', seg(lt, 6.9, 7.6), 1480, 400, 210 * backOut(smile), '#AFC6E6', t, { size: 1.9, bottom: 1.1 });
     camEnd();
-  } else {                                        // 19–22 tilt down his body; the drop slides; his jeans bleed into a river
-    const cy = kf(lt, [[9, 420], [12, 900]], easeIO);
-    camBegin(1060, cy, 1.25);
+  } else {                                        // 19–22 the brothers bump shoulders; tilt down; the drop slides; his jeans bleed into a river
+    const cy = kf(lt, [[9.8, 420], [12, 900]], easeIO);
+    camBegin(1160, cy, 1.25);
     sky('s2sky', blue, { ground: '#C9D3DF', gy: 820 });
-    puppet('rere', 'main', 1060, 1010, 800, { t });
+    const bump = Math.sin(seg(lt, 9, 9.7) * Math.PI) + spring(lt, 9.7, 2, 5) * .3;
+    puppet('rere', 'main', 1060 + bump * 26, 1010, 800, { t, rot: bump * .05 });
+    puppet('tongtong', 'main', 1420 - bump * 26, 1010, 800, { t, rot: -bump * .05 });
     const k = seg(lt, 9.2, 11), y = lerp(560, 930, easeIn(k)), x = 1060 + Math.sin(k * 7) * 40;
     drop(x, y, 22, t);
     const fl = seg(lt, 10.8, 12);
@@ -861,7 +864,7 @@ function S2(lt, t) {
 // where the lenses sit on the 'face' sprites: [x offset, height from the bottom] as fractions of the sprite
 const GLASSES = { rere: [.17, .58], wo: [.19, .62] };
 
-// ═════════ 镜3 我 (22–34) · 靛蓝 ═════════
+// ═════════ 镜3 我 & 璐璐 (22–34) · 靛蓝 ═════════
 function riverBG(key) {
   layer(key, -600, -900, W + 1400, H + 1100, () => {
     wcBands(key + 'sky', -600, -900, W + 1400, 1400, ['#6F7FB8', '#98A6CF', '#C5CDE3'], { a: .07 });
@@ -876,11 +879,12 @@ function S3(lt, t) {
     camBegin(cx, 540, 1);
     riverBG('s3r');
     const bx = lt < 3 ? lerp(-100, 400, easeOut(seg(lt, 0, 3))) : 400, rock = Math.sin(t * 1.6) * .03;
-    puppet('wo', 'main', bx, 930, 640, { t, rot: rock, shadow: false });
-    paperBoat(bx, 950, 200, rock);
+    puppet('wo', 'main', bx - 70, 930, 640, { t, rot: rock, shadow: false });
+    puppet('lulu', 'main', bx + 80, 930, 640, { t, rot: rock, shadow: false });
+    paperBoat(bx, 950, 270, rock);
     const peel = seg(lt, 3.2, 4.6);
     for (let i = 0; i < KEYS; i++) {
-      const k = clamp(peel * 1.6 - i * .12), sx = bx + 10, sy = 560 + i * 24;
+      const k = clamp(peel * 1.6 - i * .12), sx = bx - 60, sy = 560 + i * 24;
       const x = lerp(sx, keyX(i), easeIO(k)), y = lerp(sy, keyY, easeIO(k)) - Math.sin(k * Math.PI) * 120;
       const hit = lt > 4.6 && Math.abs(lt - (4.8 + i * .38)) < .12;
       if (k > 0) { wcStroke('s3keyc' + i, [[x - 80, y], [x + 80, y + 2]], 30, 28, hit ? '#FFE2A0' : '#F4ECD6', { a: .2, mul: false }); wcStroke('s3key' + i, [[x - 76, y + 4], [x + 76, y + 6]], 8, 7, hit ? '#E8A33A' : '#2D3A6A', { a: .2, mul: false }); }
@@ -890,14 +894,15 @@ function S3(lt, t) {
       const i = Math.min(KEYS - 1, Math.floor((lt - 4.6) / .38)), k = ((lt - 4.6) / .38) % 1;
       const [x, y] = i < KEYS - 1 ? arcPt([keyX(i), keyY - 26], [keyX(i + 1), keyY - 26], 110, k) : [keyX(KEYS - 1), keyY - 26];
       drop(x, y, 20, t);
-    } else drop(bx + 130, 860, 20, t);
-    rabbit(bx + 110, 915, 36, t, { alpha: .95 });
+    } else drop(bx + 200, 860, 20, t);
+    rabbit(bx + 190, 915, 36, t, { alpha: .95 });
     camEnd();
-  } else if (lt < 10) {                           // 29–32 his face: a smile
+  } else if (lt < 10) {                           // 29–32 two round windows side by side: he smiles, then she does
     const z = kf(lt, [[7, 1], [10, 1.08]], ease);
     camBegin(960, 540, z);
     riverBG('s3r');
-    moonWindow('s3w', 'wo', 'e0', 'e1', seg(lt, 7.8, 8.6), 960, 520, 360, '#6F7FB8', t, { size: 1.75, bottom: 1.08 });
+    moonWindow('s3w', 'wo', 'e0', 'e1', seg(lt, 7.6, 8.3), 700, 520, 300, '#6F7FB8', t, { size: 1.75, bottom: 1.08 });
+    moonWindow('s3w2', 'lulu', 'e0', 'e1', seg(lt, 8.5, 9.2), 1240, 520, 300, '#98A6CF', t, { size: 1.85, bottom: 1.08 });
     camEnd();
   } else {                                        // 32–34 the last key flings the drop up; stripes become lines in the sky
     const cy = kf(lt, [[10, 540], [12, 60]], easeIO);
@@ -941,7 +946,7 @@ function S4(lt, t) {
   }
 }
 
-// ═════════ 镜5 桐桐弟弟 & 璐璐 (46–58) · 桂花金 ═════════
+// ═════════ 镜5 我 & 璐璐 · 桂花树下 (46–58) · 桂花金 ═════════
 function S5(lt, t) {
   const warm = ['#F3D9A4', '#F6E6C2', '#F2E9D6'];
   const TX = 820;
@@ -949,9 +954,9 @@ function S5(lt, t) {
     sky('s5sky', warm, { ground: '#D8C590', gy: 830, h: 1000 });
     osmanthusWC('s5tree', TX, 1000, 820, t, grow);
     puppet('lulu', 'main', 1320, 1060, 880, { t });
-    puppet('tongtong', 'front', TX + 60 + shift * 200, 1060, 880, { t, rot: shift * .05 });
+    puppet('wo', 'front', TX + 60 + shift * 200, 1060, 880, { t, rot: shift * .05 });
   };
-  if (lt < 3) {                                   // 46–49 tilt up: the pattern on his sweater grows into the tree
+  if (lt < 3) {                                   // 46–49 tilt up: the gold feathers land and grow into the tree
     const cy = kf(lt, [[0, 760], [3, 330]], easeIO);
     camBegin(960, cy, 1);
     scene(easeOut(seg(lt, .2, 3)), 0);
@@ -968,7 +973,7 @@ function S5(lt, t) {
     const z = kf(lt, [[9, 1], [12, 1.1]], ease);
     camBegin(960, 330, z);
     scene(1, 1);
-    moonWindow('s5w', 'lulu', 'e0', 'e1', seg(lt, 9.6, 10.4), 1400, 120, 230, '#F3D9A4', t, { size: 1.85, bottom: 1.08 });
+    moonWindow('s5w', 'lulu', 'e0', 'e1', seg(lt, 9.6, 10.4), 1680, 90, 210, '#F3D9A4', t, { size: 1.85, bottom: 1.08 });
     floretRain('s5fl2', 800, 1700, -300, 900, 20, t, { s: 9 });
     if (lt > 11.2) wcBloom('s5pink', 1300, 400, 1200, '#EF6E96', seg(lt, 11.2, 12), { a: .08 });
     camEnd();
@@ -1131,7 +1136,7 @@ function S8(lt, t) {
 }
 
 // ═════════ 镜9 黄昏的路 (106–124) · 橙紫 ═════════
-const WALK = ['laolao', 'rere', 'tongtong', 'lulu', 'daidai', 'doudou', 'wo', 'mama', 'baba', 'eryi', 'sanyi', 'erjiumu', 'erjiu', 'daju'];
+const WALK = ['laolao', 'rere', 'tongtong', 'daidai', 'doudou', 'lulu', 'wo', 'mama', 'baba', 'eryi', 'sanyi', 'erjiumu', 'erjiu', 'daju'];
 const ROUNDS = ['button', 'rlantern', 'cake', 'pomelo', 'lantern', 'bowl', 'cake', 'bowl', 'teapot', 'lantern', 'pomelo', 'rlantern', 'cake', 'bead'];
 function roundThing(kind, x, y, s, t, i) {
   const k = 'rt' + i;
@@ -1186,7 +1191,7 @@ function S9(lt, t) {
 
 // ═════════ 镜10 圆桌 (124–148) · 夜靛与灯金 ═════════
 const TABLE_ROW = ['sanyi', 'sanyifu', 'mama', 'baba', 'laolao', 'laoye', 'daju', 'eryi', 'erjiu', 'erjiumu'];
-const TABLE_FRONT = ['rere', 'daidai', 'wo', 'lulu', 'tongtong', 'doudou'];
+const TABLE_FRONT = ['rere', 'tongtong', 'daidai', 'doudou', 'wo', 'lulu'];
 function courtyardNight() {
   layer('s10bg', -200, -1000, 2320, 2380, () => {
     wcBands('s10sky', -200, -1000, 2320, 1600, ['#1B2250', '#27306A', '#3A4580'], { a: .1 });
@@ -1230,7 +1235,7 @@ function S10(lt, t) {
     const cx = kf(lt, [[12, 500], [16, 3100]], easeIO);
     camBegin(cx, 540, 1);
     layer('s10strip', -200, -200, 4000, 1480, () => wcBands('s10strip', -200, -200, 4000, 1480, ['#1B2250', '#27306A', '#1B2250'], { a: .1 }));
-    const ALL = ['laoye', 'laolao', 'daju', 'mama', 'baba', 'erjiu', 'erjiumu', 'eryi', 'sanyi', 'sanyifu', 'wo', 'lulu', 'tongtong', 'rere', 'daidai', 'doudou'];
+    const ALL = ['laoye', 'laolao', 'daju', 'mama', 'baba', 'erjiu', 'erjiumu', 'eryi', 'sanyi', 'sanyifu', 'wo', 'lulu', 'rere', 'tongtong', 'daidai', 'doudou'];
     ALL.forEach((r, i) => { const x = 300 + i * 190, tt = 12 + (x - 300) / 2800 * 4; moonWindow('s10w' + i, r, 'e0', 'e1', seg(lt, tt, tt + .5), x, 540 + (i % 2 ? -110 : 110), 120, '#F2C877', t, { size: 1.75, bottom: 1.1 }); });
     camEnd();
   } else if (lt < 20) {                           // 140–144 the drop falls into the big mooncake; it glows
@@ -1252,7 +1257,7 @@ function S10(lt, t) {
 const PHOTO = [
   ['erjiumu', 180, 950], ['sanyi', 380, 940], ['sanyifu', 560, 900], ['mama', 760, 930], ['laoye', 960, 900], ['laolao', 1180, 920],
   ['baba', 1400, 930], ['daju', 1640, 900], ['erjiu', 1840, 940],
-  ['daidai', 440, 800], ['lulu', 640, 790], ['tongtong', 860, 770], ['doudou', 1080, 780], ['eryi', 1300, 780], ['rere', 1500, 790], ['wo', 1700, 800],
+  ['daidai', 440, 800], ['doudou', 640, 790], ['rere', 860, 770], ['tongtong', 1080, 780], ['eryi', 1300, 780], ['lulu', 1500, 790], ['wo', 1700, 800],
 ];
 function S11(lt, t) {
   const warm = ['#FFB070', .06];
@@ -1288,7 +1293,7 @@ function S11(lt, t) {
     camBegin(960, 540, z);
     layer('s11bg2', -200, -200, 2320, 1480, () => { wcBands('s11sky2', -200, -200, 2320, 1000, ['#141A40', '#1F2652', '#2E3A73'], { a: .12 }); wcRect('s11fl2', -200, 900, 2320, 600, '#3A3860', { a: .09, wet: true }); });
     moonWC(960, 340, 260, { colours: .55, t, glow: 1.2 });
-    const backs = ['erjiumu', 'sanyi', 'daidai', 'sanyifu', 'lulu', 'mama', 'tongtong', 'laoye', 'doudou', 'laolao', 'eryi', 'baba', 'rere', 'daju', 'wo', 'erjiu'];
+    const backs = ['erjiumu', 'sanyi', 'daidai', 'doudou', 'sanyifu', 'mama', 'rere', 'tongtong', 'laoye', 'laolao', 'eryi', 'baba', 'lulu', 'wo', 'daju', 'erjiu'];
     backs.forEach((r, i) => puppet(r, 'back', 110 + i * 113, 1080 + (i % 2) * 30, 480, { t, tint: ['#141A40', .35], shadow: false }));
     rabbit(960, 1060, 50, t, { alpha: .9 });
     camEnd();
@@ -1329,7 +1334,7 @@ function S12(lt, t) {
 }
 
 const SHOTS = [
-  [0, S1, '纸'], [10, S2, '热热'], [22, S3, '我'], [34, S4, '兜兜袋袋'], [46, S5, '桐桐璐璐'], [58, S6, '二姨'],
+  [0, S1, '纸'], [10, S2, '热热桐桐'], [22, S3, '我和璐璐'], [34, S4, '兜兜袋袋'], [46, S5, '桂花树下'], [58, S6, '二姨'],
   [72, S7, '姥姥姥爷'], [86, S8, '厨房'], [106, S9, '黄昏的路'], [124, S10, '圆桌'], [148, S11, '全家福'], [168, S12, '茶杯'],
 ];
 VIEWS.cast = (t) => { Object.keys(ROLE).forEach((r, i) => puppet(r, 'front', 120 + i * 112, 1000, 700, { t })); };
