@@ -463,9 +463,9 @@ function facesCourt(t, camX, o = {}) {
   // moonlight from in front of them; each face brightens as the camera (the moon's gaze) reaches it
   FACES.forEach(({ role, x }, i) => {
     const near = camX === undefined ? .6 : clamp(1 - Math.abs(x - camX) / 380), k = .12 + .3 * ease(near) + (o.all || 0) * .2;
-    puppet(role, 'main', x, 1000 + (i % 2) * 10, 560, { t, tint: ['#1A2050', .22 - .12 * near], light: ['#FFF0C8', Math.min(.55, k)], shadowCol: '#20203A' });
+    puppet(role, 'main', x, 1140 + (i % 2) * 10, 560, { t, tint: ['#1A2050', .22 - .12 * near], light: ['#FFF0C8', Math.min(.55, k)], shadowCol: '#20203A' });
   });
-  glow(camX ?? 960, 560, 700, '#FFF0C8', .08);
+  glow(camX ?? 960, 700, 700, '#FFF0C8', .08);
 }
 function S9(lt, t) {
   if (lt < 3) {                                   // 152–155 a huge moon; the family's backs appear in its light, the rabbit in front of them
@@ -497,13 +497,13 @@ function S9(lt, t) {
     camEnd();
   } else if (lt < 18.5) {                         // 164–170.5 the reverse angle, from the moon: along the sixteen faces (pan right)
     const cx = kf(lt, [[12, 360], [18.5, 1500]], k => k * k * (3 - 2 * k) * .25 + k * .75);
-    camBegin(cx, 600, 1.85);
+    camBegin(cx, 740, 1.85);
     facesCourt(t, cx);
-    floretRain('s9fl3', cx - 700, cx + 700, 200, 1100, 26, t, { s: 7 });
+    floretRain('s9fl3', cx - 700, cx + 700, 400, 1100, 26, t, { s: 7 });
     camEnd();
   } else {                                        // 170.5–173 all of them together, like a family photo (pull back); the moonlight turns to gold
     const z = kf(lt, [[18.5, 1.35], [21, 1]], ease);
-    camBegin(960, 560, z);
+    camBegin(960, 640, z);
     facesCourt(t, undefined, { all: seg(lt, 18.5, 20) });
     floretRain('s9fl4', 0, 1920, -100, 1100, 44, t, { s: 8 });
     camEnd();

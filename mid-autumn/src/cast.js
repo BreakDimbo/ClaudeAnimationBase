@@ -42,11 +42,13 @@ function avgColour(src) {
 function paintFigure(src, sw, sh, sx = 0, sy = 0) {
   const m = Math.ceil(sh * .035), cw = sw + 2 * m, ch = sh + 2 * m;
   const base = cnv(cw, ch), bg = base.getContext('2d'); bg.drawImage(src, sx, sy, sw, sh, m, m, sw, sh);
+  // erode the cut-out by two pixels so no card-white fringe survives around hair and dark clothes
+  { const er = cnv(cw, ch), eg = er.getContext('2d'); eg.drawImage(base, 0, 0); eg.globalCompositeOperation = 'destination-in'; for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) eg.drawImage(base, dx, dy); bg.clearRect(0, 0, cw, ch); bg.drawImage(er, 0, 0); }
   const avg = avgColour(base);
   const out = cnv(cw, ch), g = out.getContext('2d');
   // 1. halo: the figure's colour bled out into the wet paper
-  const halo = cnv(cw, ch), hg = halo.getContext('2d'); hg.drawImage(base, 0, 0); hg.globalCompositeOperation = 'source-in'; hg.fillStyle = mix(avg, '#F4E6D8', .35); hg.fillRect(0, 0, cw, ch);
-  g.filter = `blur(${(sh * .011).toFixed(1)}px)`; g.globalAlpha = .55; g.drawImage(halo, sh * .004, sh * .006); g.filter = 'none'; g.globalAlpha = 1;
+  const halo = cnv(cw, ch), hg = halo.getContext('2d'); hg.drawImage(base, 0, 0); hg.globalCompositeOperation = 'source-in'; hg.fillStyle = mix(avg, '#8A7A8A', .2); hg.fillRect(0, 0, cw, ch);
+  g.filter = `blur(${(sh * .011).toFixed(1)}px)`; g.globalAlpha = .4; g.drawImage(halo, sh * .004, sh * .006); g.filter = 'none'; g.globalAlpha = 1;
   // 2. body with granulation
   const body = cnv(cw, ch), b = body.getContext('2d');
   b.drawImage(base, 0, 0);

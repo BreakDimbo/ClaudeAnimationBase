@@ -19,14 +19,14 @@ const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { std
 if (args.encode) {
   const out = resolve(ROOT, args.out || '日色变得慢.mp4'), wav = ROOT + '/build/audio.wav';
   const fps = 24;
-  await run(FFMPEG, ['-y', '-loglevel', 'error', '-stats', '-framerate', String(fps), '-i', `${FRAMES}/f%05d.jpg`, '-i', wav,
+  await run(FFMPEG, ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', `${FRAMES}/f%05d.jpg`, '-i', wav,
     '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', String(args.crf || 20), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]);
   console.log('wrote ' + out);
   process.exit(0);
 }
 
-const browser = await chromium.launch({ args: ['--no-sandbox', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await chromium.launch({ args: ['--no-sandbox', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-gpu', '--disable-accelerated-2d-canvas', '--disable-gpu-compositing'] });
 async function openPage(tag = '') {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   page.on('console', m => { if (['error', 'warning'].includes(m.type())) console.log(`[page${tag}]`, m.text()); });

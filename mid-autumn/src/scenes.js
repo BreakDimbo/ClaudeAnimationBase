@@ -353,23 +353,29 @@ function roofsLayer() {
   layer('bjroofs', -600, 200, 3200, 1100, () => {
     wc('bjhill', [[-400, 640], [-100, 520], [300, 470], [620, 540], [900, 640]], '#7E9A7A', { a: .07, spread: .3, wet: true });
     whiteDagoba('bjdag', 250, 560, 420, '#F3F0EA');
-    wcRect('bjband', -600, 575, 3200, 700, '#C9C8CC', { a: .15, spread: .02, mul: false });
-    ROOFS.forEach((f, j) => {
-      const c = mix('#B4B7C2', '#8A8E9C', f.r / 2), dk = mix(c, '#30323C', .3);
-      if (f.r === 0 && j % 3 === 1) wcAt('bjgk' + j, UNIT(12), '#E2B84A', f.x + f.w * .5, f.y - f.h - 40, 80, { sy: .8, a: .07, spread: .6, wet: true });
-      wcRect('bjwall' + j, f.x + 20, f.y - 4, f.w - 40, 120, mix('#D8D4D0', '#B4B0B2', f.r / 2), { a: .15, spread: .04, mul: false });
-      wc('bjroof' + j, [[f.x + 30, f.y - f.h], [f.x + f.w - 30, f.y - f.h], [f.x + f.w + 10, f.y], [f.x - 10, f.y]], c, { a: .15, spread: .03, edge: .3, mul: false });
-      ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = rgba(dk, .3); ctx.lineWidth = 2.5; ctx.beginPath();
-      for (let x = f.x + 8; x < f.x + f.w - 8; x += 14) { ctx.moveTo(lerp(f.x + 30, f.x + f.w - 30, (x - f.x) / f.w), f.y - f.h + 4); ctx.lineTo(x, f.y - 2); }
-      ctx.stroke(); ctx.restore();
-      wcStroke('bjridge' + j, [[f.x + 22, f.y - f.h], [f.x + f.w - 22, f.y - f.h]], 8 + f.r * 2, 8 + f.r * 2, dk, { a: .12 });
-    });
+    // two long rows of hutong roofs, regular like a woodblock print, with ginkgo gold between them
+    for (let r = 0; r < 2; r++) {
+      const y = 610 + r * 115, h = 46 + r * 18, roof = ['#A9AEBC', '#939AAA'][r], dk = mix(roof, '#2A2C38', .35), wall = ['#D6D0C8', '#CBC3BA'][r];
+      for (let i = 0; i < 9; i++) wcAt('bjgk' + r + ':' + i, UNIT(12), i % 2 ? '#E2B84A' : '#D9A23A', -520 + i * 380 + (r ? 190 : 0) + hash('gk', r, i) * 80, y - h - 26, 70 + hash('gk', i, r) * 40, { sy: .75, a: .08, spread: .55, wet: true });
+      ctx.fillStyle = wall; ctx.fillRect(-600, y - 2, 3200, 125);
+      for (let x = -560 + r * 120; x < 2600; x += 150) { ctx.fillStyle = r ? '#8A3A30' : '#9A4A3E'; ctx.fillRect(x, y + 34, 36, 44); ctx.strokeStyle = 'rgba(60,30,24,.5)'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y + 34, 36, 44); ctx.beginPath(); ctx.moveTo(x + 18, y + 34); ctx.lineTo(x + 18, y + 78); ctx.moveTo(x, y + 56); ctx.lineTo(x + 36, y + 56); ctx.stroke(); }
+      for (let x = -600 + (r ? 210 : 0); x < 2600; x += 440) {
+        const w = 420;
+        wc('bjroof' + r + ':' + x, [[x + 26, y - h], [x + w - 26, y - h], [x + w + 8, y + 2], [x - 8, y + 2]], roof, { a: .16, spread: .02, edge: .35, mul: false });
+        ctx.save(); ctx.strokeStyle = rgba(dk, .45); ctx.lineWidth = 2.2; ctx.beginPath();
+        for (let k = 8; k < w - 8; k += 12) { ctx.moveTo(x + 26 + (w - 52) * k / w, y - h + 3); ctx.lineTo(x - 8 + (w + 16) * k / w, y); }
+        ctx.stroke(); ctx.restore();
+        wcStroke('bjridge' + r + ':' + x, [[x + 14, y - h - 2], [x + w - 14, y - h - 2]], 9 + r * 3, 9 + r * 3, dk, { a: .15 });
+        for (const [ex, sd] of [[x + 14, -1], [x + w - 14, 1]]) wcStroke('bjrend' + r + ':' + x + sd, [[ex, y - h - 2], [ex + sd * 10, y - h - 14]], 8, 4, dk, { a: .15 });
+      }
+    }
     // the near roof, seen from just above its ridge
-    wc('bjnear', [[-600, RIDGE.y], [2600, RIDGE.y], [2600, 1300], [-600, 1300]], '#9EA2B0', { a: .16, spread: .02, mul: false });
-    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.strokeStyle = 'rgba(80,84,100,.25)'; ctx.lineWidth = 8; ctx.beginPath();
-    for (let x = -600; x < 2600; x += 30) { ctx.moveTo(x, RIDGE.y + 14); ctx.lineTo(x + (x - 960) * .25, 1300); }
+    { const g = ctx.createLinearGradient(0, RIDGE.y, 0, 1300); g.addColorStop(0, '#A8ADBB'); g.addColorStop(1, '#8C92A4'); ctx.fillStyle = g; ctx.fillRect(-600, RIDGE.y, 3200, 1300 - RIDGE.y); }
+    ctx.save(); ctx.strokeStyle = 'rgba(80,84,100,.28)'; ctx.lineWidth = 8; ctx.beginPath();
+    for (let x = -600; x < 2600; x += 30) { ctx.moveTo(x, RIDGE.y + 14); ctx.lineTo(x + (x - 960) * .04, 1300); }
     ctx.stroke(); ctx.restore();
-    wcStroke('bjnearR', [[-600, RIDGE.y], [2600, RIDGE.y]], 22, 22, '#5A5E6C', { a: .12 });
+    wcBands('bjneart', -600, RIDGE.y, 3200, 450, ['#9AA0B0', '#8A90A2'], { a: .03 });
+    ctx.fillStyle = '#5A5E6C'; ctx.fillRect(-600, RIDGE.y - 10, 3200, 20); ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(-600, RIDGE.y - 10, 3200, 4);
   });
 }
 function persimmonTree(key, t, ripe) {

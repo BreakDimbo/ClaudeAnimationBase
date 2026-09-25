@@ -160,7 +160,12 @@ function sgStreet() {
     }
     wcRect('sgfloor', -700, 900, 5800, 40, '#A0685A', { a: .12, spread: .03 });
     wcRect('sgroad', -700, 940, 5800, 700, '#4A5068', { a: .1, spread: .05, wet: true });
-    for (let i = 0; i < 40; i++) { const x = -600 + hash('sgr', i) * 5600; wcStroke('sgref' + i, [[x, 960 + hash('sgr', i, 1) * 200], [x + 6, 1160 + hash('sgr', i, 1) * 300]], 18, 2, SG_COL[i % 6], { a: .025, mul: false, wet: true }); }
+    for (let i = 0; i < SG_N; i++) {       // wet asphalt: each lamp and each facade colour smeared down in the water
+      const x = SG_X0 + i * SG_W + SG_W / 2;
+      for (const [dx, c, a, w] of [[0, '#F6C87A', .22, 34], [-100, SG_COL[i % 6], .16, 60], [100, SG_COL[i % 6], .12, 50]]) {
+        ctx.save(); ctx.translate(x + dx, 1040); ctx.scale(1, 5); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, w); g.addColorStop(0, rgba(c, a)); g.addColorStop(1, rgba(c, 0)); ctx.fillStyle = g; ctx.fillRect(-w, -w, w * 2, w * 2); ctx.restore();
+      }
+    }
     // the puddle
     wcAt('sgpud', UNIT(24), '#2A3050', 1040, 1200, 230, { sy: .3, a: .12, spread: .08, edge: .4 });
   });
@@ -326,9 +331,12 @@ function landL(key, x, y, w, h, skyCols, groundCols, hy) {
 const BT_RIVER = [[-700, 600], [-100, 612], [500, 600], [1000, 640], [1350, 720], [1150, 820], [800, 900], [1000, 1040], [1800, 1130], [2700, 1080], [3400, 1000], [4000, 960]];
 function btRiver() {
   layer('btriver', -700, -400, 4800, 1900, () => {
-    wcBands('btsky', -700, -400, 4800, 1050, ['#E89A5A', '#F2B676', '#F6D2A0', '#F8E6C6'], { a: .08 });
+    { const g = ctx.createLinearGradient(0, -400, 0, 600); g.addColorStop(0, '#E0885A'); g.addColorStop(.55, '#F2B87E'); g.addColorStop(1, '#FBE2BC'); ctx.fillStyle = g; ctx.fillRect(-700, -400, 4800, 1000); }
+    wcBands('btsky', -700, -400, 4800, 1000, ['#F0A070', '#F6C590', '#FAE0BC'], { a: .03 });
     wc('btmount', [[-700, 560], [-300, 470], [100, 510], [500, 440], [900, 500], [1400, 430], [1900, 490], [2500, 420], [3100, 480], [3700, 440], [4100, 520], [4100, 600], [-700, 600]], '#9A7A8A', { a: .08, spread: .2 });
-    wcBands('btplain', -700, 580, 4800, 920, ['#D8B070', '#C99A5A', '#B98A50'], { a: .08 });
+    { const g = ctx.createLinearGradient(0, 560, 0, 1500); g.addColorStop(0, '#D8AE74'); g.addColorStop(1, '#A87A4A'); ctx.fillStyle = g; ctx.fillRect(-700, 560, 4800, 940); }
+    wc('btmount2', [[-700, 600], [-300, 540], [200, 570], [700, 520], [1200, 575], [1800, 530], [2500, 570], [3200, 525], [4100, 560], [4100, 620], [-700, 620]], '#A07A7A', { a: .09, spread: .15 });
+    wcBands('btplain', -700, 580, 4800, 920, ['#E0B880', '#C99A5A', '#B98A50'], { a: .03 });
     for (let i = 0; i < BT_RIVER.length - 1; i++) {
       const [a, b] = [BT_RIVER[i], BT_RIVER[i + 1]], w = y => lerp(12, 150, clamp((y - 600) / 520));
       wcStroke('btriv' + i, [a, b], w(a[1]), w(b[1]), '#F2D4A0', { a: .16, spread: .06, wet: true, mul: false, layers: 10 });
