@@ -361,8 +361,8 @@ function S8(lt, t) {
 }
 
 // ═════════ 镜9 黄昏的路 (106–124) · 橙紫 ═════════
-const WALK = ['laolao', 'rere', 'tongtong', 'daidai', 'doudou', 'lulu', 'wo', 'mama', 'baba', 'eryi', 'sanyi', 'erjiumu', 'erjiu', 'daju'];
-const ROUNDS = ['button', 'rlantern', 'cake', 'pomelo', 'lantern', 'bowl', 'cake', 'bowl', 'teapot', 'lantern', 'pomelo', 'rlantern', 'cake', 'bead'];
+const WALK = ['laolao', 'daju', 'mama', 'baba', 'lulu', 'wo', 'erjiu', 'erjiumu', 'daidai', 'doudou', 'sanyi', 'tongtong', 'eryi', 'rere'];
+const ROUNDS = ['button', 'bead', 'bowl', 'teapot', 'cake', 'lantern', 'pomelo', 'cake', 'lantern', 'bowl', 'pomelo', 'cake', 'rlantern', 'rlantern'];
 function roundThing(kind, x, y, s, t, i) {
   const k = 'rt' + i;
   if (kind === 'bowl') bowlWC(k, x, y, s * .8);
@@ -375,10 +375,10 @@ function roundThing(kind, x, y, s, t, i) {
   if (kind === 'bead') wcCircle(k, x, y, s * .35, '#EB8E2C', { mul: false, a: .25 });
 }
 function duskBG() {
-  layer('s9bg', -400, -300, 7400, 1700, () => {
-    wcBands('s9sky', -400, -300, 7400, 1100, ['#7C6FA8', '#C98AA0', '#F2A77A', '#F8CFA0'], { a: .065 });
-    for (let i = 0; i < 12; i++) { const x = i * 620 - 200; wc('s9hill' + i, [[x - 500, 1400], [x - 300, 860 - hash('h', i) * 80], [x, 800 - hash('h', i, 1) * 120], [x + 300, 870], [x + 520, 1400]], i % 2 ? '#8C6F9C' : '#A07AA0', { a: .06, spread: .3 }); }
-    wcRect('s9road', -400, 960, 7400, 400, '#C8A08A', { a: .06, spread: .2, wet: true });
+  layer('s9bg', -2600, -300, 9600, 1700, () => {
+    wcBands('s9sky', -2600, -300, 9600, 1100, ['#7C6FA8', '#C98AA0', '#F2A77A', '#F8CFA0'], { a: .065 });
+    for (let i = 0; i < 16; i++) { const x = i * 620 - 2400; wc('s9hill' + i, [[x - 500, 1400], [x - 300, 860 - hash('h', i) * 80], [x, 800 - hash('h', i, 1) * 120], [x + 300, 870], [x + 520, 1400]], i % 2 ? '#8C6F9C' : '#A07AA0', { a: .06, spread: .3 }); }
+    wcRect('s9road', -2600, 960, 9600, 400, '#C8A08A', { a: .06, spread: .2, wet: true });
   });
 }
 function S9(lt, t) {
@@ -397,12 +397,15 @@ function S9(lt, t) {
     drop(walkX(6) + 80, 180 + Math.sin(t) * 16, lerp(40, 90, seg(lt, 6, 12)), t);
     camEnd();
   } else if (lt < 15) {                           // 118–121 rere, at the back, stops and looks back to wait
-    const stopX = walkX(1, 12.4);
-    camBegin(stopX - 200, 540, 1);
+    const stopX = walkX(13, 12.4);
+    camBegin(stopX - 300, 540, 1);
     duskBG();
     const waiting = lt > 12.4;
-    puppet('rere', 'side', waiting ? stopX : walkX(1), 1000, 640, { t, flip: lt > 13, walk: waiting ? undefined : lt * 1.1, tint: dusk });
-    puppet('laolao', 'side', stopX - 700 + (lt - 12) * 120, 1000, 640, { t, walk: lt * .9, tint: dusk });
+    puppet('rere', 'side', waiting ? stopX : walkX(13), 1000, 640, { t, flip: lt > 13, walk: waiting ? undefined : lt * 1.1, tint: dusk });
+    const cx2 = stopX - 820 + (lt - 12) * 110;           // grandpa's cloud drifts up to him
+    cloudPuff('s9ride', cx2, 1010, 200, '#F4E9E2');
+    puppet('laoye', 'side', cx2 - 90, 980, 640, { t, dy: Math.sin(t * 1.4) * 6, shadow: false, tint: dusk });
+    puppet('sanyifu', 'side', cx2 + 110, 980, 640, { t, dy: Math.sin(t * 1.4 + 1) * 6, shadow: false, tint: dusk });
     camEnd();
   } else {                                        // 121–124 tilt up: the round things light up as lanterns
     const cy = kf(lt, [[15, 540], [18, 60]], easeIO);
@@ -415,8 +418,8 @@ function S9(lt, t) {
 }
 
 // ═════════ 镜10 圆桌 (124–148) · 夜靛与灯金 ═════════
-const TABLE_ROW = ['sanyi', 'sanyifu', 'mama', 'baba', 'laolao', 'laoye', 'daju', 'eryi', 'erjiu', 'erjiumu'];
-const TABLE_FRONT = ['rere', 'tongtong', 'daidai', 'doudou', 'wo', 'lulu'];
+const TABLE_ROW = ['sanyi', 'sanyifu', 'erjiu', 'erjiumu', 'laolao', 'laoye', 'daju', 'mama', 'baba', 'eryi'];
+const TABLE_FRONT = ['tongtong', 'daidai', 'doudou', 'wo', 'lulu', 'rere'];
 function courtyardNight() {
   layer('s10bg', -200, -1000, 2320, 2380, () => {
     wcBands('s10sky', -200, -1000, 2320, 1600, ['#1B2250', '#27306A', '#3A4580'], { a: .1 });
@@ -460,7 +463,7 @@ function S10(lt, t) {
     const cx = kf(lt, [[12, 500], [16, 3100]], easeIO);
     camBegin(cx, 540, 1);
     layer('s10strip', -200, -200, 4000, 1480, () => wcBands('s10strip', -200, -200, 4000, 1480, ['#1B2250', '#27306A', '#1B2250'], { a: .1 }));
-    const ALL = ['laoye', 'laolao', 'daju', 'mama', 'baba', 'erjiu', 'erjiumu', 'eryi', 'sanyi', 'sanyifu', 'wo', 'lulu', 'rere', 'tongtong', 'daidai', 'doudou'];
+    const ALL = ['laoye', 'laolao', 'daju', 'mama', 'baba', 'wo', 'lulu', 'erjiu', 'erjiumu', 'daidai', 'doudou', 'eryi', 'rere', 'sanyi', 'sanyifu', 'tongtong'];
     ALL.forEach((r, i) => { const x = 300 + i * 190, tt = 12 + (x - 300) / 2800 * 4; moonWindow('s10w' + i, r, 'e0', 'e1', seg(lt, tt, tt + .5), x, 540 + (i % 2 ? -110 : 110), 120, '#F2C877', t, { size: 1.75, bottom: 1.1 }); });
     camEnd();
   } else if (lt < 20) {                           // 140–144 the drop falls into the big mooncake; it glows
@@ -480,9 +483,9 @@ function S10(lt, t) {
 
 // ═════════ 镜11 全家福 (148–168) · 满月金 ═════════
 const PHOTO = [
-  ['erjiumu', 180, 950], ['sanyi', 380, 940], ['sanyifu', 560, 900], ['mama', 760, 930], ['laoye', 960, 900], ['laolao', 1180, 920],
-  ['baba', 1400, 930], ['daju', 1640, 900], ['erjiu', 1840, 940],
-  ['daidai', 440, 800], ['doudou', 640, 790], ['rere', 860, 770], ['tongtong', 1080, 780], ['eryi', 1300, 780], ['lulu', 1500, 790], ['wo', 1700, 800],
+  ['sanyifu', 180, 900], ['sanyi', 380, 940], ['erjiu', 560, 930], ['erjiumu', 760, 950], ['laoye', 960, 900], ['laolao', 1180, 920],
+  ['daju', 1400, 900], ['mama', 1640, 930], ['baba', 1840, 930],
+  ['tongtong', 440, 780], ['daidai', 640, 800], ['doudou', 860, 790], ['eryi', 1080, 780], ['rere', 1300, 770], ['lulu', 1500, 790], ['wo', 1700, 800],
 ];
 function S11(lt, t) {
   const warm = ['#FFB070', .06];
@@ -518,7 +521,7 @@ function S11(lt, t) {
     camBegin(960, 540, z);
     layer('s11bg2', -200, -200, 2320, 1480, () => { wcBands('s11sky2', -200, -200, 2320, 1000, ['#141A40', '#1F2652', '#2E3A73'], { a: .12 }); wcRect('s11fl2', -200, 900, 2320, 600, '#3A3860', { a: .09, wet: true }); });
     moonWC(960, 340, 260, { colours: .55, t, glow: 1.2 });
-    const backs = ['erjiumu', 'sanyi', 'daidai', 'doudou', 'sanyifu', 'mama', 'rere', 'tongtong', 'laoye', 'laolao', 'eryi', 'baba', 'lulu', 'wo', 'daju', 'erjiu'];
+    const backs = ['sanyifu', 'sanyi', 'tongtong', 'erjiu', 'erjiumu', 'daidai', 'doudou', 'laoye', 'laolao', 'daju', 'eryi', 'rere', 'mama', 'baba', 'lulu', 'wo'];
     backs.forEach((r, i) => puppet(r, 'back', 110 + i * 113, 1080 + (i % 2) * 30, 480, { t, tint: ['#141A40', .35], shadow: false }));
     rabbit(960, 1060, 50, t, { alpha: .9 });
     camEnd();
