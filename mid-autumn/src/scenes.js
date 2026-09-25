@@ -99,6 +99,45 @@ function crane(x, y, s, flap = .25, o = {}) {
   if (o.glow) glow(0, 0, 160, '#FFE2A0', o.glow);
   ctx.restore();
 }
+// ── the jade rabbit, the thread through the film ──
+// hop along keyframes [[t, x, y], ...]: sits at each key, hops (an arc) into the next one in the last `dur` seconds
+function hopPath(lt, K, h = 40, dur = .4) {
+  if (lt <= K[0][0]) return { x: K[0][1], y: K[0][2], flip: K.length > 1 ? K[1][1] < K[0][1] : false };
+  for (let i = 1; i < K.length; i++) if (lt < K[i][0]) {
+    const a = K[i - 1], b = K[i], d = Math.min(dur, b[0] - a[0]), k = seg(lt, b[0] - d, b[0]), flip = b[1] === a[1] ? (i > 1 ? a[1] < K[i - 2][1] : false) : b[1] < a[1];
+    const [x, y] = arcPt([a[1], a[2]], [b[1], b[2]], h, k); return { x, y, flip, air: k > 0 && k < 1 };
+  }
+  const L = K[K.length - 1], P = K[K.length - 2]; return { x: L[1], y: L[2], flip: P ? L[1] < P[1] || (L[1] === P[1] && false) : false };
+}
+function bunny(x, y, s, t, o = {}) {
+  if (s < 1) return;
+  wcGlow(x, y - s * .5, s * 1.6, '#EAF0FF', o.glow ?? .16);
+  rabbit(x, y, s, t, o);
+}
+const bunnyAt = (p, s, t, o = {}) => bunny(p.x, p.y, s, t, { flip: p.flip, ...o });
+// the crane with the rabbit riding on its back
+function craneRider(x, y, s, flap, t, o = {}) {
+  crane(x, y, s, flap, o);
+  const r = o.rot || 0, dx = (o.flip ? 1 : -1) * 4 * s / 100, dy = -12 * s / 100;
+  bunny(x + dx * Math.cos(r) - dy * Math.sin(r), y + dx * Math.sin(r) + dy * Math.cos(r), s * .42, t, { flip: o.flip, glow: .12 });
+}
+// 兔儿爷: Beijing's Mid-Autumn rabbit god, a clay figure in armour with flags on his back (y = base, s = height)
+function tuerye(x, y, s, t) {
+  const k = s / 100;
+  ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
+  [['#3A6AC8', -.5], ['#E8B84A', -.18], ['#3A9A5A', .18], ['#C8322E', .5]].forEach(([c, a], i) => { ctx.save(); ctx.translate(0, -52); ctx.rotate(a + Math.sin(t * 2 + i) * .03); limb([[0, 0], [0, -62]], 1.6, '#6A4A2A'); poly([[0, -62], [16, -54], [0, -44]], c, .95); ctx.restore(); });
+  poly([[-30, 0], [30, 0], [26, -12], [-26, -12]], '#6A4AA0', 1, 'rgba(60,40,60,.6)', 1);
+  poly([[-26, -12], [26, -12], [18, -52], [-18, -52]], '#C8322E', 1, 'rgba(90,20,20,.6)', 1);
+  poly([[-18, -52], [18, -52], [14, -36], [-14, -36]], '#E8B84A', 1);
+  limb([[-22, -30], [22, -30]], 3, '#E8B84A');
+  for (const sd of [-1, 1]) { ctx.save(); ctx.translate(sd * 6, -76); ctx.rotate(sd * .12); ctx.fillStyle = '#F8F4EC'; ctx.beginPath(); ctx.ellipse(0, -18, 5, 20, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#F2A7B4'; ctx.beginPath(); ctx.ellipse(0, -18, 2.4, 14, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+  ctx.fillStyle = '#F8F4EC'; ctx.beginPath(); ctx.ellipse(0, -64, 13, 12, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(120,100,90,.5)'; ctx.lineWidth = 1; ctx.stroke();
+  poly([[-9, -74], [9, -74], [6, -84], [-6, -84]], '#E8B84A', 1);
+  ctx.fillStyle = '#2A2233'; ctx.beginPath(); ctx.arc(-5, -66, 1.6, 0, TAU); ctx.arc(5, -66, 1.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#D8342E'; ctx.beginPath(); ctx.ellipse(0, -58.5, 2.4, 1.4, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(240,120,140,.5)'; ctx.beginPath(); ctx.arc(-8, -61, 2.6, 0, TAU); ctx.arc(8, -61, 2.6, 0, TAU); ctx.fill();
+  ctx.restore();
+}
 // the letter: an envelope with the red postcode boxes and a stamp
 function letter(x, y, s, o = {}) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0); ctx.scale(s / 100 * (o.sx ?? 1), s / 100 * (o.sy ?? 1));
@@ -209,7 +248,9 @@ const dawnSky = () => bandsL('dawn', -400, -600, 2720, 1500, ['#F4C99A', '#F7DDB
 function gateMorning(lt, gold) {
   dawnSky();
   wcGlow(1700, 120, 700, '#FFD9A0', .35);
-  cloudWC('g-cl1', 380, 120, 220, '#FFF6E6', .9); cloudWC('g-cl2', 1560, 60, 260, '#FFF1DE', .8);
+  cloudWC('g-cl1', 520, 250, 200, '#FFF6E6', .8);
+  ctx.save(); ctx.globalAlpha = lerp(1, .6, seg(lt, 3, 9)); moonWC(260, 150 + seg(lt, 0, 14) * 60, 92, { glow: .6, rabbit: 1 - seg(lt, 1.3, 1.5) }); ctx.restore();
+  cloudWC('g-cl0', 0, 0, 1, '#FFF6E6', 0); cloudWC('g-cl2', 1560, 60, 260, '#FFF1DE', .8);
   gateLayer(); gateDoors(0);
   plaqueChars('pl', gold);
   ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(250,210,160,.16)'; ctx.fillRect(-600, -600, 3200, 2400); ctx.restore();
@@ -223,18 +264,27 @@ function sunbeam(x, a = 1) {
   ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 220 + 300, -300); ctx.lineTo(x + 220 + 300, -300); ctx.lineTo(x + 220 - 500, 1300); ctx.lineTo(x - 220 - 500, 1300); ctx.closePath(); ctx.fill();
   ctx.restore();
 }
-const LIGHT_AT = [4.5, 6.6, 7.4, 8.2];            // 向 阳 门 第 turn gold (s)
+const LIGHT_AT = [4.5, 6.6, 7.4, 8.2];            // 向 阳 门 第 turn gold (s), as the rabbit reaches each one
+const S1_HOPS = [[2.7, 960, 206], [3.7, 1210, 372], [4.4, 1150, 372], [6.5, 1024, 372], [7.3, 897, 372], [8.1, 770, 372], [9.7, 1110, 910], [10.7, 1040, 936]];
+function s1Rabbit(lt, t) {
+  if (lt < 1.3) return;
+  if (lt < 2.7) { const k = seg(lt, 1.3, 2.7), [x, y] = arcPt([230, 190], [960, 206], 110, ease(k)); for (let i = 1; i < 6; i++) { const [tx, ty] = arcPt([230, 190], [960, 206], 110, ease(clamp(k - i * .04))); wcGlow(tx, ty - 10, 24, '#FFF4D0', .12); } bunny(x, y, 50, t, { glow: .3 }); return; }
+  if (lt > 12.1) return;
+  const K = lt < 11 ? S1_HOPS : [...S1_HOPS, [12.1, 975, 918]];
+  bunnyAt(hopPath(lt, K, 50), lt > 9.5 ? 64 : 50, t);
+}
 function S1(lt, t) {
   const gold = i => ease(seg(lt, LIGHT_AT[i], LIGHT_AT[i] + .6));
   if (lt < 3) {                                   // 0–3 the dawn wash runs down the paper
     camBegin(960, 540, 1);
     camEnd();
-    wetFront('s1front', lerp(-80, 1180, easeIO(seg(lt, .2, 3))), () => { camBegin(960, 540, 1); gateMorning(lt, 0); camEnd(); });
+    wetFront('s1front', lerp(-80, 1180, easeIO(seg(lt, .2, 3))), () => { camBegin(960, 540, 1); gateMorning(lt, 0); s1Rabbit(lt, t); camEnd(); });
   } else if (lt < 9) {                            // 3–9 push in; the sunbeam crosses and the characters turn gold one by one
     const z = kf(lt, [[3, 1], [9, 1.55]], easeIO), cy = lerp(540, 470, seg(z, 1, 1.55));
     camBegin(960, cy, z);
     gateMorning(lt, gold);
     sunbeam(lerp(1900, 500, seg(lt, 3.4, 8.8)), Math.sin(seg(lt, 3.4, 8.8) * Math.PI));
+    s1Rabbit(lt, t);
     camEnd();
   } else if (lt < 11.5) {                         // 9–11.5 tilt down to the threshold: the letter slides out under the door
     const cy = kf(lt, [[9, 660], [11.5, 830]], easeIO);
@@ -244,16 +294,18 @@ function S1(lt, t) {
     ctx.save(); ctx.beginPath(); ctx.rect(600, 895, 800, 200); ctx.clip();
     letter(960 + k * 10, lerp(870, 936, k), 70, { sy: .5, rot: .03 * k });
     ctx.restore();
+    s1Rabbit(lt, t);
     camEnd();
   } else {                                        // 11.5–14 it folds itself into a crane and flies up into the clouds (tilt up)
     const cy = kf(lt, [[12, 830], [14, 150]], easeIO);
     camBegin(960, cy, 1.9);
     gateMorning(lt, 1);
-    const f = seg(lt, 11.5, 12.3), fly = seg(lt, 12.3, 14);
-    if (f < .5) letter(970, 936, 70, { sy: .5 * (1 - ease(f * 2) * .9), sx: 1 - f * .4, rot: .03 });
+    const f = seg(lt, 11.5, 12.1), fly = seg(lt, 12.3, 14);
+    if (f < .5) { letter(970, 936, 70, { sy: .5 * (1 - ease(f * 2) * .9), sx: 1 - f * .4, rot: .03 }); s1Rabbit(lt, t); }
     else {
       const [x, y] = arcPt([970, 925], [1120, 100], 80, easeIn(fly) * .7 + fly * .3);
-      crane(x, y, lerp(30, 70, ease(seg(f, .5, 1))), lt * 2.4, { rot: -.25 * fly });
+      if (lt < 12.1) { crane(x, y, lerp(30, 70, ease(seg(f, .5, 1))), lt * 2.4, { rot: -.25 * fly }); s1Rabbit(lt, t); }
+      else craneRider(x, y, 70, lt * 2.4, t, { rot: -.25 * fly });
       if (f < 1) spatter('s1fold', 970, 930, 60, 14, '#F2C24E', { size: 2.4, a: .5 * (1 - f), mul: false });
     }
     cloudWC('s1cl', 1000, 120, 300, '#FFFFFF', seg(lt, 13, 14));
@@ -382,7 +434,7 @@ function S2(lt, t) {
       pigeon(x, y, 96 * d, lt * 3.4 + hash('pg', i, 3), { flip: Math.sin(a) > 0 });
     }
     const k = seg(lt, -1, 2), [x, y] = k < 1 ? arcPt([500, 820], [C[0] - 180, C[1] + 60], 200, easeOut(k)) : [C[0] + Math.cos(lt * 1.4) * 200, C[1] + 60 + Math.sin(lt * 1.4) * 60];
-    crane(x, y, 130, lt * 2.2, { rot: -.1 });
+    craneRider(x, y, 130, lt * 2.2, t, { rot: -.1 });
     camEnd();
   } else if (lt < 6) {                            // 17–20 the pigeons land on the ridge one by one; the crane lands last
     camBegin(960, 540, 1);
@@ -393,20 +445,25 @@ function S2(lt, t) {
       const [x, y] = arcPt([px - 700 + i * 40, 60 + hash('pl', i) * 120], [px, py], -60, k);
       pigeon(x, y, 80, k < 1 ? lt * 3.6 + i * .3 : 0, { perch: k >= 1, flip: k >= 1 && i % 3 === 0 });
     }
-    const k = ease(seg(lt, 4.8, 5.8)), [x, y] = arcPt([1700, 80], [960, RIDGE.y - 26], -40, k);
-    crane(x, y, 90, k < 1 ? lt * 2.4 : .25, { fold: k >= 1, rot: (1 - k) * .15 });
+    tuerye(1560, RIDGE.y + 6, 170, t);
+    const k = ease(seg(lt, 4, 4.9)), [x, y] = arcPt([1700, 80], [960, RIDGE.y - 26], -40, k);
+    if (lt < 5) craneRider(x, y, 90, k < 1 ? lt * 2.4 : .25, t, { fold: k >= 1, rot: (1 - k) * .15 });
+    else { crane(x, y, 90, .25, { fold: true }); bunnyAt(hopPath(lt, [[5, 956, RIDGE.y - 36], [5.45, 1200, RIDGE.y - 4], [5.9, 1470, RIDGE.y - 4]], 60), 44, t); }
     camEnd();
   } else if (lt < 9) {                            // 20–23 persimmons ripen from green to orange one by one (slow push)
     const z = kf(lt, [[6, 1], [9, 1.12]], ease);
     camBegin(960, 480, z);
     persimmonTree('bjper', t, i => seg(lt, 6.2 + i * .17, 6.8 + i * .17));
+    bunny(1700, 642, 54, t, { flip: true });
     camEnd();
   } else if (lt < 12) {                           // 23–26 a bicycle rolls along the hutong wall; the crane rides in its basket (pan with it)
     const bx = lerp(300, 2600, seg(lt, 9, 12)), cx = bx + 60;
     camBegin(cx, 540, 1);
     hutongLayer();
     const [kx, ky] = bicycle(bx, 930, 300, bx);
-    crane(kx - 10, ky - 26, 80, .25, { fold: true });
+    poly([[kx - 52, ky - 34], [kx + 48, ky - 34], [kx + 48, ky + 4], [kx - 52, ky + 4]], '#C8322E', 1, 'rgba(90,20,20,.6)', 1.2);
+    ctx.fillStyle = '#E8B84A'; ctx.beginPath(); ctx.arc(kx - 2, ky - 15, 11, 0, TAU); ctx.fill();
+    crane(kx - 28, ky - 36, 64, .25, { fold: true }); bunny(kx + 22, ky - 34, 34, t);
     camEnd();
   } else if (lt < 15) {                           // 26–29 北海白塔 at dusk: the sky blushes, the crane circles the spire
     camBegin(960, 540, 1);
@@ -420,7 +477,7 @@ function S2(lt, t) {
       ctx.save(); ctx.translate(0, 1560); ctx.scale(1, -1); ctx.globalAlpha = .25; whiteDagoba('bhdagR', 960, 780, 560, '#E8E4EC'); ctx.restore();
     });
     const a = seg(lt, 12.4, 14.8) * TAU * 1.05 + Math.PI, cx0 = 960, cy0 = 190, far = Math.sin(a) < 0;
-    const cr = () => crane(cx0 + Math.cos(a) * 200, cy0 + Math.sin(a) * 50, 70 * (1 + .25 * Math.sin(a)), lt * 2.6, { flip: Math.cos(a + Math.PI / 2) < 0 });
+    const cr = () => craneRider(cx0 + Math.cos(a) * 200, cy0 + Math.sin(a) * 50, 70 * (1 + .25 * Math.sin(a)), lt * 2.6, t, { flip: Math.cos(a + Math.PI / 2) < 0 });
     if (far) cr();
     whiteDagoba('bhdag', 960, 780, 560, '#F4F0EC');
     ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgba('#F0B4A8', .18 * p); ctx.fillRect(-200, -200, 2320, 1480); ctx.restore();
@@ -432,6 +489,8 @@ function S2(lt, t) {
     bandsL('bjdusk1', -200, -200, 2320, 1480, ['#C7A2C8', '#EBB1B8', '#F6D2B8'], .075);
     wcStroke('bjlast-br', [[-100, 120], [400, 260], [900, 330], [1300, 300]], 30, 8, '#4A3A34', { a: .14 });
     wcAt('bjlast-lf', UNIT(8), '#B79A3A', 1040, 360, 40, { sy: .45, rot: .6, a: .13 });
+    const stomp = hop(lt, 15.3, 15.55, 14);
+    bunny(870, 326 + stomp.dy, 44, t);
     const k = seg(lt, 15.6, 18), r = 44 * Math.pow(40, easeIn(k)), y = 380 + 60 * Math.sin(k * Math.PI);
     wcAt('bjlast-p', UNIT(20), '#EE6A24', 960 + k * 10, y, r, { a: .16, spread: .18, edge: .4, mul: false });
     wcAt('bjlast-ph', UNIT(12), '#FFD0A0', 960 - r * .3, y - r * .3, r * .35, { a: .12, wet: true, mul: false, gran: 0 });

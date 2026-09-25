@@ -74,8 +74,10 @@ function S3(lt, t) {
     camBegin(first ? XA_LAN[7] : cx, first ? lerp(560, 640, seg(z, 1, 7)) : 560, z);
     xaSky('xasky'); stars('xast', 80, -700, -600, 4600, 1000, t);
     xaWall();
-    const front = lerp(-700, 3900, seg(lt, 3, 6));
-    xaLanterns((i, x) => i === 7 ? 1 : clamp((front - x) / 120), t);
+    const rx = lerp(60, 2700, seg(lt, 3, 6)), ph = (rx - 60) / 300;
+    xaLanterns((i, x) => i === 7 ? 1 : lt < 3 ? 0 : clamp((rx - x) / 90), t);
+    if (first) bunny(XA_LAN[7], 606, 22, t, { glow: .25 });
+    else bunny(rx, 500 - Math.abs(Math.sin(ph * Math.PI)) * 70, 60, t, { glow: .25 });
     camEnd();
   } else if (lt < 9) {                            // 38–41 the bell rings: its sound spreads through the sky in rings of wash
     camBegin(960, 540, 1);
@@ -87,6 +89,8 @@ function S3(lt, t) {
       ctx.beginPath(); ctx.ellipse(960, 250, 60 + 1100 * easeOut(k), (60 + 1100 * easeOut(k)) * .55, 0, 0, TAU); ctx.stroke();
     }
     ctx.restore();
+    const jump = hop(lt, 6.35, 6.7, 40);
+    bunny(560, 1010 + jump.dy, 80, t, { glow: .25 });
     camEnd();
   } else if (lt < 12) {                           // 41–44 two lanterns in the wind: they touch, touch again, and stay together (slow push)
     const z = kf(lt, [[9, 1], [12, 1.12]], ease);
@@ -105,22 +109,26 @@ function S3(lt, t) {
       lanternWC(x, y, 150, 1, a * .3, key);
     }
     if (k > .75 && k < 1.2) glow(960 + Math.sin(sway) * Ls, 140 + Ls, 120, '#FFD090', .25 * Math.sin(seg(k, .75, 1.2) * Math.PI));
+    bunny(960, 111, 46, t, { glow: .25 });
     camEnd();
   } else if (lt < 15) {                           // 44–47 大雁塔: the moon rises and comes to rest on the spire (tilt up)
     const cy = kf(lt, [[12, 760], [15, 300]], easeIO);
     camBegin(960, cy, 1);
     bandsL('xapags', -400, -500, 2720, 1980, ['#10163A', '#1A2150', '#2C3268', '#48467A'], .08);
-    moonWC(960, lerp(700, PAGODA_TIP - 80, easeOut(seg(lt, 12, 14.6))), 84, { glow: .8 });
+    moonWC(960, lerp(700, PAGODA_TIP - 110, easeOut(seg(lt, 12, 14.6))), 84, { glow: .8 });
     wildGoosePagoda('xapag', false);
+    const reach = Math.max(hop(lt, 14.5, 14.8, 16).dy, hop(lt, 14.95, 15.25, 20).dy);
+    bunny(962, 54 + reach, 30, t, { glow: .3 });
     camEnd();
   } else {                                        // 47–50 a raindrop falls onto the moon; ripples spread across the frame (→ Singapore)
     camBegin(960, 300, 1);
     bandsL('xapags', -400, -500, 2720, 1980, ['#10163A', '#1A2150', '#2C3268', '#48467A'], .08);
-    moonWC(960, PAGODA_TIP - 80, 84, { glow: .8 });
+    moonWC(960, PAGODA_TIP - 110, 84, { glow: .8 });
     wildGoosePagoda('xapag', false);
+    bunny(962, 54, 30, t, { glow: .3 });
     const k = seg(lt, 15.2, 16);
-    if (k < 1) { ctx.fillStyle = 'rgba(220,235,250,.8)'; ctx.beginPath(); ctx.ellipse(975, lerp(-300, PAGODA_TIP - 80, easeIn(k)), 5, 11, 0, 0, TAU); ctx.fill(); }
-    ripples(960, PAGODA_TIP - 80, lt, [16, 16.5, 17], 700, .6, '#E8F0FF', .5, 2);
+    if (k < 1) { ctx.fillStyle = 'rgba(220,235,250,.8)'; ctx.beginPath(); ctx.ellipse(975, lerp(-300, PAGODA_TIP - 110, easeIn(k)), 5, 11, 0, 0, TAU); ctx.fill(); }
+    ripples(960, PAGODA_TIP - 110, lt, [16, 16.5, 17], 700, .6, '#E8F0FF', .5, 2);
     camEnd();
   }
 }
@@ -212,6 +220,7 @@ function S4(lt, t) {
     camBegin(cx, 540, 1);
     sgStreet(); sgShutters(() => 0);
     sgLamps(i => flick(lt, 3.2 - (i * SG_W) / 1900), t);
+    craneRider(lerp(2500, 300, seg(lt, -1, 3)), 760 + Math.sin(lt * 2) * 20, 100, lt * 2.4, t, { flip: true, wet: .5 });
     rain('sgr1', 260, t, cx - 1100, cx + 1100, -100, 1200, { a: .3 });
     camEnd();
   } else if (lt < 6) {                            // 53–56 the five-foot way: shutters open one after another, rabbit lanterns light up
@@ -219,6 +228,7 @@ function S4(lt, t) {
     sgStreet(); sgShutters((i, j) => seg(lt, 3.3 + (i - 4) * .7 + j * .22, 3.9 + (i - 4) * .7 + j * .22));
     sgLamps(() => 1, t);
     for (let i = 0; i < 4; i++) { const x = 1100 + i * 170; limb([[x, 672], [x, 730]], 1.5, 'rgba(40,30,30,.6)'); rabbitLanternWC(x, 820, 60, seg(lt, 4.4 + i * .3, 4.8 + i * .3), t, 'sgrl' + i); }
+    bunny(1352, 824, 46, t, { glow: .2 });
     rain('sgr2', 160, t, 700, 2000, 0, 1100, { a: .28 });
     camEnd();
   } else if (lt < 9) {                            // 56–59 down to a puddle holding the moon; a frangipani spirals down onto it
@@ -229,6 +239,7 @@ function S4(lt, t) {
     puddleMoon(t, { inside: () => { if (k >= 1) ripples(1080, 1190, lt, [8.4, 8.8], 120, .3, '#FFFFFF', .5); } });
     const a = k * TAU * 2.2, [x, y] = [lerp(760, 1080, easeIO(k)) + Math.cos(a) * 80 * (1 - k), lerp(620, 1185, easeIn(k) * .6 + k * .4) + Math.sin(a) * 30 * (1 - k)];
     frangipani(x, y, 26, a * .5);
+    bunny(770, 1214, 54, t);
     rain('sgr3', 120, t, 300, 1700, cy - 600, cy + 600, { a: .25 * rainA });
     camEnd();
   } else if (lt < 12) {                           // 59–62 under the eave: the wet crane and a rabbit lantern; the rain stops, the crane shuffles closer
@@ -236,9 +247,10 @@ function S4(lt, t) {
     camBegin(1360, 610, z);
     sgStreet(); sgShutters(() => 1); sgLamps(() => 1, t);
     rabbitLanternWC(1420, 648, 56, 1, t, 'sgeave');
-    const shake = lt > 10 && lt < 10.6 ? Math.sin(lt * 70) * 3 : 0, hopK = seg(lt, 10.9, 11.4), cx = lerp(1260, 1318, ease(hopK)), cy = 646 - Math.sin(hopK * Math.PI) * 12;
-    crane(cx + shake, cy, 60, .25, { fold: true, wet: 1 - seg(lt, 10, 11) * .6 });
-    if (lt > 10 && lt < 10.7) spatter('sgshake' + Math.floor(lt * 12), cx, cy - 20, 50, 10, '#E8F0F8', { size: 1.6, a: .8, mul: false });
+    crane(1236, 646, 60, .25, { fold: true, wet: 1 - seg(lt, 10, 11) * .6 });
+    const shake = lt > 10 && lt < 10.6 ? Math.sin(lt * 70) * 2.5 : 0, hopK = seg(lt, 10.9, 11.4), cx = lerp(1310, 1366, ease(hopK)), cy = 648 - Math.sin(hopK * Math.PI) * 12;
+    bunny(cx + shake, cy, 34, t, { glow: .2 });
+    if (lt > 10 && lt < 10.7) spatter('sgshake' + Math.floor(lt * 12), cx + 10, cy - 20, 40, 10, '#E8F0F8', { size: 1.4, a: .8, mul: false });
     rain('sgr4', 60, t, 1000, 1700, 380, 900, { a: .3 * rainA, len: 30 });
     for (let i = 0; i < 5; i++) { const ph = (t * .9 + hash('drip', i)) % 1; if (rainA > .2 || ph < .3) { ctx.fillStyle = 'rgba(230,240,250,.7)'; ctx.beginPath(); ctx.ellipse(1190 + i * 80, 672 + ph * 260, 2, 4, 0, 0, TAU); ctx.fill(); } }
     camEnd();
@@ -247,22 +259,17 @@ function S4(lt, t) {
     bayNight();
     moonWC(760, 230, 74, { glow: .7 });
     SUPERTREES.forEach(([x, top, s], i) => supertree(x, top, s, ease(seg(lt, 12.5 + i * .25, 13.1 + i * .25)), t, i));
+    const ck = seg(lt, 12, 15); craneRider(lerp(200, 1500, ck), 250 + Math.sin(ck * 5) * 20, 90, lt * 2.4, t);
     ctx.save(); ctx.globalAlpha = .35; ctx.translate(0, 1600); ctx.scale(1, -1); SUPERTREES.forEach(([x, top, s], i) => { if (lt > 12.5 + i * .25) glow(x, top, 90, '#C060D0', .3); }); ctx.restore();
     camEnd();
   } else {                                        // 65–68 the puddle moon, close: a drop breaks it into gold glints that stretch into lines (→ the Yellow River)
-    const z = kf(lt, [[15, 2.6], [18, 3.4]], ease);
-    camBegin(1070, 1195, z);
+    const z = kf(lt, [[15, 2.6], [18, 7]], easeIn);
+    camBegin(lerp(1070, 1080, seg(lt, 15, 16)), 1192, z);
     sgStreet(); sgLamps(() => 1, t);
-    const br = seg(lt, 15.8, 16.4), st = seg(lt, 16.3, 18);
-    puddleMoon(t, { moon: br < .5, inside: () => {
-      ripples(1080, 1190, lt, [15.8], 160, .3, '#FFFFFF', .6);
-      if (br > 0) for (let i = 0; i < 40; i++) {
-        const a = hash('gl', i) * TAU, d = Math.sqrt(hash('gl', i, 1)) * 60 * (1 + br), x = 1080 + Math.cos(a) * d * 1.8, y = 1190 + Math.sin(a) * d * .5, L = 4 + st * (40 + hash('gl', i, 2) * 260);
-        ctx.strokeStyle = rgba('#F6D27A', .85); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - L, y); ctx.lineTo(x + L, y); ctx.stroke();
-      }
-    } });
+    puddleMoon(t, { inside: () => ripples(1080, 1190, lt, [15.8, 16.2], 120, .3, '#FFFFFF', .6) });
     if (lt < 15.8) { const k = seg(lt, 15.2, 15.8); ctx.fillStyle = 'rgba(230,240,250,.85)'; ctx.beginPath(); ctx.ellipse(1080, lerp(1000, 1190, easeIn(k)), 3, 6, 0, 0, TAU); ctx.fill(); }
     camEnd();
+    blend(ease(seg(lt, 16.9, 18)), () => { camBegin(960, 540, 1.27); mooncakeTop(960, 540, 300); camEnd(); });
   }
 }
 
@@ -370,6 +377,7 @@ function S5(lt, t) {
     for (let j = 0; j < 12; j++) { const [x, y] = riverPoint(seg(lt, -.5, 3) * .9 + .05 - j * .012); glow(x, y, 90 - j * 5, '#FFD890', .28 - j * .02); }
     ctx.restore();
     wcGlow(1100, 380, 300, '#FFE0A0', .35);
+    { const [x, y] = riverPoint(seg(lt, -.5, 3) * .9 + .05); craneRider(x + 60, y - 170, 110, lt * 2.3, t); }
     camEnd();
   } else if (lt < 6) {                            // 71–74 reeds on the bank; a deer steps out and drinks; rings spread
     camBegin(960, 540, 1);
@@ -384,6 +392,8 @@ function S5(lt, t) {
     ctx.save(); ctx.translate(0, 1580); ctx.scale(1, -1); ctx.globalAlpha = .25; deer(x, 790, 330, { head: hd, t, run: step > 0 && step < 1 ? lt * 1.6 : null }); ctx.restore();
     const d = deer(x, 790, 330, { head: hd, t, run: step > 0 && step < 1 ? lt * 1.6 : null });
     ripples(d.muzzle[0], 800, lt, [4.8, 5.4], 110, .25, '#FFF6E0', .6);
+    crane(1330, 800, 70, .25, { fold: true });
+    bunnyAt(hopPath(lt, [[3.3, 1330, 780], [3.9, 1210, 806], [4.5, 1120, 806]], 50), 50, t);
     reedClump('btr1', 180, 900, 360, 14, t); reedClump('btr2', 1700, 920, 420, 16, t); reedClump('btr3', 1150, 860, 240, 6, t, '#9A7A4A');
     camEnd();
   } else if (lt < 9) {                            // 74–77 the steelworks: the furnace opens like a second sunset, sparks drift up (slow pull back)
@@ -400,6 +410,8 @@ function S5(lt, t) {
       const x = 980 + (hash('sp', i, 1) - .5) * 200 + Math.sin(k * 6 + i) * 40 * k, y = 460 - k * (300 + hash('sp', i, 2) * 300);
       glow(x, y, 10, '#FFC060', .9 * (1 - k) * (.6 + .4 * Math.sin(lt * 20 + i)));
     }
+    wc('btmound', [[200, 1100], [400, 930], [700, 900], [950, 1000], [1000, 1100]], '#2A2232', { a: .15, spread: .1 });
+    bunny(640, 912, 80, t, { glow: .25 });
     camEnd();
   } else if (lt < 12) {                           // 77–80 the deer lifts its head; the moon rises between its antlers (tilt up)
     const cy = kf(lt, [[9, 700], [12, 400]], easeIO);
@@ -409,7 +421,8 @@ function S5(lt, t) {
     const hd = 1 - ease(seg(lt, 9.2, 10.4));
     const DX = 1250, DY = 1250, DS = 720, k = DS / 100, ax = DX - k * 40, ay = DY - k * 150;
     moonWC(ax, lerp(1250, ay, easeOut(seg(lt, 10, 12))), 64, { glow: .8 });
-    deer(DX, DY, DS, { head: hd, flip: true, t, col: '#7A5040' });
+    const dd = deer(DX, DY, DS, { head: hd, flip: true, t, col: '#7A5040' });
+    bunny(dd.antlers[0] + 6, dd.antlers[1] + 34, 92, t, { flip: true, glow: .25 });
     camEnd();
   } else if (lt < 15) {                           // 80–83 the deer runs across the grass; a flower opens in every hoofprint (pan right, following)
     const dx = lerp(200, 2600, seg(lt, 12, 15));
@@ -418,6 +431,7 @@ function S5(lt, t) {
     const gy = 900;
     for (let i = 0; ; i++) { const px = 260 + i * 110; if (px > dx - 20) break; const tb = 12 + (px - 200) / 2400 * 3; flower(px + (i % 2) * 30, gy + 20 + (i % 2) * 18, 16, seg(lt, tb + .15, tb + .6), ['#F6E0F0', '#FFF4D0', '#E8C8F0'][i % 3]); }
     deer(dx, gy, 300, { run: lt * 2.2, t });
+    bunny(dx - 6, gy - 238 + Math.sin(lt * 2.2 * TAU * 2) * 4, 46, t);
     camEnd();
   } else {                                        // 83–86 the trail of flowers leads to a white yurt on the horizon (push in)
     const z = kf(lt, [[15, 1], [18, 1.5]], easeIn);
@@ -425,6 +439,7 @@ function S5(lt, t) {
     landL('btgr2', -400, -300, 2720, 1700, ['#4A4E8A', '#8A80B0', '#D8B0BC'], ['#6E8A5A', '#3E5A40'], 610);
     for (let i = 0; i < 40; i++) { const u = i / 40, y = lerp(1100, 610, Math.pow(u, .5)), x = 960 + Math.sin(u * 7) * 300 * (1 - u); flower(x, y, lerp(22, 4, Math.pow(u, .5)), 1, ['#F6E0F0', '#FFF4D0', '#E8C8F0'][i % 3]); }
     yurt('btyurt', 960, 600, 80, t);
+    { const u = seg(lt, 15, 18) * .75, x = 960 + Math.sin(u * 7) * 300 * (1 - u), y = lerp(1100, 610, Math.pow(u, .5)), sz = lerp(70, 16, Math.pow(u, .5)); bunny(x, y - Math.abs(Math.sin(lt * 2.6 * Math.PI)) * sz * .5, sz, t, { flip: Math.cos(u * 7) < 0 }); }
     camEnd();
   }
 }

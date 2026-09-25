@@ -1,4 +1,5 @@
 // ───────────────────────── props: Mid-Autumn things in watercolour ─────────────────────────
+let MOONRAB = 0;            // how much of the rabbit is in the moon (0 while it travels)
 const GOLD = '#E8B23A', GOLD_DK = '#C7862A', MOON = '#F6DE94', INDIGO = '#2E3A73', NIGHT = '#1F2652';
 
 // the five cities' colours (persimmon, lantern red, shophouse mint and pink, river ochre, grassland blue); [time from which present, colour]
@@ -35,13 +36,18 @@ function moonWC(x, y, r, o = {}) {
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * .98, 0, TAU); ctx.clip();
   wcAt('moon-wash1', UNIT(18), MOON, x - r * .15, y - r * .1, r * .85, { a: .06, spread: .5, wet: true });
   wcAt('moon-wash2', UNIT(14), '#EFC870', x + r * .3, y + r * .25, r * .5, { a: .05, spread: .6, wet: true });
-  ctx.globalAlpha = .28;
+  ctx.globalAlpha = .12;
   wcAt('moon-tree', UNIT(12), '#D8A860', x + r * .28, y - r * .12, r * .3, { a: .1, spread: .7, gran: .2 });
-  // the rabbit's silhouette
-  wcAt('moon-rab-b', UNIT(12), '#D8A860', x - r * .28, y + r * .2, r * .2, { sy: .72, a: .1, spread: .4 });
-  wcAt('moon-rab-h', UNIT(10), '#D8A860', x - r * .1, y + r * .06, r * .1, { a: .1, spread: .4 });
-  wcAt('moon-rab-e', UNIT(8), '#D8A860', x - r * .08, y - r * .1, r * .1, { sy: 2.6, sx: .4, a: .1, spread: .3, rot: .2 });
   ctx.restore();
+  // the rabbit's silhouette: gone all day (it is down on earth), back at the end
+  const rk = o.rabbit ?? MOONRAB;
+  if (rk > 0) {
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * .98, 0, TAU); ctx.clip(); ctx.globalAlpha = .5 * rk;
+    ctx.translate(x - r * .22, y + r * .32); ctx.scale(r / 260, r / 260);
+    ctx.fillStyle = '#C8904A'; ctx.beginPath(); ctx.ellipse(0, -42, 58, 40, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(52, -80, 28, 24, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(34, -126, 9, 36, -.35, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(58, -128, 8, 33, .05, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(-56, -52, 12, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
   if (o.colours) {   // the family's colours inside the full moon
     ctx.save(); ctx.beginPath(); ctx.arc(x, y, r * .97, 0, TAU); ctx.clip(); ctx.globalAlpha = o.colours;
     PICKUPS.forEach(([_, c], i) => { const a = i / PICKUPS.length * TAU + (o.t || 0) * .05; wcAt('moon-c' + i, UNIT(12), c, x + Math.cos(a) * r * .5, y + Math.sin(a) * r * .5, r * .45, { a: .018, spread: .9, wet: true, gran: 0, mul: false, layers: 10 }); });
@@ -53,22 +59,25 @@ function moonWC(x, y, r, o = {}) {
 function rabbit(x, y, s, t, o = {}) {
   const k = o.hop ?? 0, dy = -Math.sin(clamp(k) * Math.PI) * s * .9, stretch = Math.sin(clamp(k) * Math.PI) * .12;
   ctx.save(); ctx.translate(x, y + dy); ctx.scale((o.flip ? -1 : 1) * s / 100, s / 100 * (1 - stretch * .3));
-  if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
-  const body = '#DCE3F0', shade = '#8D9BC4';
-  wcAt('rab-shadow', UNIT(10), '#7C7AA0', 0, 2 - dy * 100 / s, 55, { sy: .15, a: .06, wet: true, gran: 0 });
-  wc('rab-body', ellPts(0, -42, 58, 40, 16), body, { a: .1, spread: .35, edge: .3 });
-  wc('rab-bshade', ellPts(8, -30, 44, 24, 12), shade, { a: .06, spread: .4, wet: true });
-  wc('rab-tail', ellPts(-56, -52, 12, 11, 10), '#EEF1F7', { a: .12, spread: .3 });
-  wc('rab-head', ellPts(52, -78, 28, 24, 14), body, { a: .1, spread: .3, edge: .3 });
+  if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
+  const body = '#FBFAF6', shade = '#A8B2D4', ink = 'rgba(70,66,100,.85)', lw = Math.max(1.6, 150 / s);
+  const line = (P, close = true) => { ctx.beginPath(); P.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); if (close) ctx.closePath(); ctx.strokeStyle = ink; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.stroke(); };
+  wcAt('rab-shadow', UNIT(10), '#6C6A90', 0, 2 - dy * 100 / s, 55, { sy: .15, a: .06, wet: true, gran: 0 });
   const ear = Math.sin(t * 5 + (o.ph || 0)) * .08;
-  ctx.save(); ctx.translate(42, -96); ctx.rotate(-.35 + ear);
-  wc('rab-ear1', ellPts(0, -34, 9, 34, 12), body, { a: .11, spread: .3, edge: .3 }); wc('rab-ear1i', ellPts(0, -30, 4, 24, 10), '#F2A7B4', { a: .09, spread: .3, wet: true });
-  ctx.restore();
-  ctx.save(); ctx.translate(56, -96); ctx.rotate(.05 - ear);
-  wc('rab-ear2', ellPts(0, -32, 8, 32, 12), body, { a: .11, spread: .3, edge: .3 });
-  ctx.restore();
-  ctx.fillStyle = '#2A2233'; ctx.beginPath(); ctx.arc(62, -82, 3.2, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#F29BB0'; ctx.beginPath(); ctx.arc(79, -74, 2.6, 0, TAU); ctx.fill();
+  // far ear, body, tail, head, near ear: opaque white paint so it reads on dark washes too
+  ctx.save(); ctx.translate(58, -98); ctx.rotate(.08 - ear); const E2 = ellPts(0, -30, 8, 31, 14); wc('rab-ear2', E2, mix(body, shade, .25), { a: .2, spread: .15, mul: false, edge: 0 }); line(E2); ctx.restore();
+  const B = ellPts(0, -40, 56, 39, 22); wc('rab-body', B, body, { a: .2, spread: .15, mul: false, edge: 0 });
+  wc('rab-bshade', ellPts(-6, -24, 46, 18, 14), shade, { a: .06, spread: .35, wet: true });
+  line(B);
+  const T = ellPts(-55, -50, 11, 10, 10); wc('rab-tail', T, body, { a: .2, mul: false, edge: 0 }); line(T);
+  limb([[-10, -30], [-4, -12], [-26, -2]], lw, ink);                 // haunch
+  limb([[34, -18], [38, -2], [48, -1]], lw, ink);                     // front paw
+  const Hd = ellPts(54, -76, 27, 23, 16); wc('rab-head', Hd, body, { a: .2, spread: .15, mul: false, edge: 0 }); line(Hd);
+  ctx.save(); ctx.translate(42, -94); ctx.rotate(-.3 + ear); const E1 = ellPts(0, -34, 9, 34, 14); wc('rab-ear1', E1, body, { a: .2, spread: .15, mul: false, edge: 0 }); wc('rab-ear1i', ellPts(0, -30, 4, 24, 10), '#F2A7B4', { a: .12, spread: .3, wet: true, mul: false }); line(E1); ctx.restore();
+  ctx.fillStyle = '#2A2233'; ctx.beginPath(); ctx.arc(62, -81, 3.6, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(63.2, -82.4, 1.2, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#F29BB0'; ctx.beginPath(); ctx.arc(80, -73, 3, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(242,155,176,.35)'; ctx.beginPath(); ctx.arc(62, -68, 6, 0, TAU); ctx.fill();
   ctx.restore();
 }
 // rabbit on a hop cycle between two points (period in s)
