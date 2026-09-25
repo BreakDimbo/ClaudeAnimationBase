@@ -1107,24 +1107,49 @@ const GLYPH = {
   '第': [[[24, 2], [10, 20], 9, 4], [[18, 10], [42, 10], 7, 7], [[28, 12], [32, 22], 7, 5], [[66, 2], [54, 20], 9, 4], [[60, 10], [88, 10], 7, 7], [[72, 12], [76, 22], 7, 5],
     [[20, 34], [78, 34], [78, 54], 8, 8], [[22, 54], [78, 54], 8, 8], [[24, 54], [22, 72], [82, 72], [80, 94], [70, 90], 8, 8], [[50, 26], [50, 100], 9, 9], [[46, 72], [16, 96], 8, 3]],
 };
-// k: gold 0..1; o.only: 'ri' draws just the 日 of 阳; o.fade multiplies everything
-function glyph(key, ch, cx, cy, size, k, o = {}) {
-  const S = size / 100, X = p => [cx + (p[0] - 50) * S, cy + (p[1] - 50) * S];
-  GLYPH[ch].forEach((st, i) => {
-    const tag = typeof st[st.length - 1] === 'string' ? st[st.length - 1] : null, nums = st.filter(v => typeof v === 'number');
-    if (o.only && tag !== o.only) return;
-    const P = st.filter(v => Array.isArray(v)).map(X), w0 = nums[0] * S * 1.15, w1 = nums[1] * S * 1.15;
-    const a = (o.fade ?? 1) * (o.except && tag === o.except ? (o.exceptA ?? 1) : 1);
-    if (a <= 0) return;
+// Each character is merged into one silhouette first (strokes pressed in at the start, a small press at each turn,
+// horizontals thinner than verticals), then painted as one wash: colour, granulation, pigment pooled at the edge.
+// k: gold 0..1; o.only: 'ri' draws just the 日 of 阳; o.except/exceptA leave it out; o.fade multiplies everything
+const GLY = new Map();
+function glyphMask(ch, size, filt) {
+  const key = ch + size + filt; let c = GLY.get(key); if (c) return c;
+  const pad = size * .25, S = size / 100; c = document.createElement('canvas'); c.width = c.height = Math.ceil(size + pad * 2);
+  const g = c.getContext('2d'); g.translate(pad, pad); g.fillStyle = g.strokeStyle = '#FFFFFF'; g.lineCap = 'round'; g.lineJoin = 'round';
+  GLYPH[ch].forEach(st => {
+    const tag = typeof st[st.length - 1] === 'string' ? st[st.length - 1] : null;
+    if (filt === 'only' && tag !== 'ri') return; if (filt === 'except' && tag === 'ri') return;
+    const nums = st.filter(v => typeof v === 'number'), P = st.filter(v => Array.isArray(v)).map(p => [p[0] * S, p[1] * S]), w0 = nums[0] * S * 1.4, w1 = nums[1] * S * 1.4;
     for (let j = 0; j < P.length - 1; j++) {
-      const ww0 = lerp(w0, w1, j / (P.length - 1)), ww1 = lerp(w0, w1, (j + 1) / (P.length - 1)), sk = `${key}:${ch}:${i}:${j}`;
-      ctx.save(); ctx.globalAlpha *= a;
-      if (o.dim !== false) wcStroke(sk + 'd', [P[j], P[j + 1]], ww0, ww1, o.dimCol || '#7A5C34', { a: .16, mul: false, spread: .18, gran: .3 });
-      if (k > 0) { ctx.globalAlpha *= clamp(k); wcStroke(sk + 'g', [P[j], P[j + 1]], ww0, ww1, '#F2C24E', { a: .17, mul: false, spread: .14, gran: .2, edge: .35 }); }
-      ctx.restore();
+      const [p, q] = [P[j], P[j + 1]], horiz = Math.abs(q[0] - p[0]) > Math.abs(q[1] - p[1]) * 1.5, f = horiz ? .78 : 1.08;
+      const a0 = lerp(w0, w1, j / (P.length - 1)) * f, a1 = lerp(w0, w1, (j + 1) / (P.length - 1)) * f;
+      const n = 12; for (let i = 0; i < n; i++) { const u0 = i / n, u1 = (i + 1) / n; g.lineWidth = lerp(a0, a1, (u0 + u1) / 2) * (1 + .12 * Math.sin(u0 * Math.PI)); g.beginPath(); g.moveTo(lerp(p[0], q[0], u0), lerp(p[1], q[1], u0) - (horiz ? Math.sin(u0 * Math.PI) * a0 * .12 : 0)); g.lineTo(lerp(p[0], q[0], u1), lerp(p[1], q[1], u1) - (horiz ? Math.sin(u1 * Math.PI) * a0 * .12 : 0)); g.stroke(); }
+      if (j > 0) { g.save(); g.translate(p[0] + a0 * .1, p[1] + a0 * .08); g.rotate(.7); g.beginPath(); g.ellipse(0, 0, a0 * .6, a0 * .46, 0, 0, TAU); g.fill(); g.restore(); }
     }
+    g.save(); g.translate(P[0][0] + w0 * .08, P[0][1] + w0 * .05); g.rotate(.75); g.beginPath(); g.ellipse(0, 0, w0 * .62, w0 * .46, 0, 0, TAU); g.fill(); g.restore();
   });
-  if (k > 0 && o.glow !== false) wcGlow(cx, cy, size * .9, '#FFD27A', .18 * clamp(k) * (o.fade ?? 1));
+  GLY.set(key, c); return c;
+}
+function glyphPaint(ch, size, filt, col) {
+  const key = ch + size + filt + col; let c = GLY.get(key); if (c) return c;
+  const m = glyphMask(ch, size, filt), w = m.width, h = m.height; c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'), r = mulberry(skey(key));
+  g.fillStyle = col; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < w * h / 60; i++) { g.fillStyle = rgba(mix(col, i % 3 ? '#5A3A10' : '#FFF4C8', .5), .05 + r() * .12); g.fillRect(r() * w, r() * h, 1 + r() * 1.5, 1 + r() * 1.5); }
+  const e = document.createElement('canvas'); e.width = w; e.height = h; const eg = e.getContext('2d');       // pooled edge
+  eg.fillStyle = mix(col, '#3A2208', .45); eg.fillRect(0, 0, w, h); eg.globalCompositeOperation = 'destination-out'; eg.filter = `blur(${Math.max(1, size * .018).toFixed(1)}px)`; eg.drawImage(m, 0, 0);
+  g.globalAlpha = .5; g.drawImage(e, 0, 0); g.globalAlpha = 1;
+  g.globalCompositeOperation = 'destination-in'; g.filter = `blur(${Math.max(.5, size * .004).toFixed(2)}px)`; g.drawImage(m, 0, 0); g.filter = 'none';
+  GLY.set(key, c); return c;
+}
+function glyph(key, ch, cx, cy, size, k, o = {}) {
+  const filt = o.only ? 'only' : (o.except && (o.exceptA ?? 1) <= 0 ? 'except' : 'all'), fade = o.fade ?? 1;
+  if (fade <= 0) return;
+  const pad = size * .25, x = cx - size / 2 - pad, y = cy - size / 2 - pad;
+  ctx.save(); ctx.globalAlpha *= fade;
+  if (o.dim !== false) { ctx.globalAlpha *= .9; ctx.drawImage(glyphPaint(ch, size, filt, o.dimCol || '#7A5C34'), x, y); ctx.globalAlpha /= .9; }
+  if (k > 0) { ctx.globalAlpha *= clamp(k); ctx.drawImage(glyphPaint(ch, size, filt, '#F0C04C'), x, y); }
+  ctx.restore();
+  if (k > 0 && o.glow !== false) wcGlow(cx, cy, size * .9, '#FFD27A', .18 * clamp(k) * fade);
 }
 const PLAQUE = { x: 706, y: 382, w: 508, h: 104, chars: [['向', 1150], ['阳', 1024], ['门', 897], ['第', 770]], cy: 434, size: 84 };
 function plaqueChars(key, gold, o = {}) { PLAQUE.chars.forEach(([ch, x], i) => glyph(key, ch, x, PLAQUE.cy, PLAQUE.size, typeof gold === 'function' ? gold(i) : gold, o)); }
@@ -1151,7 +1176,12 @@ function gateLayer() {
     ctx.restore();
     // roof with upturned corners, tile rows, ridge
     wc('g-roof', [[470, 214], [1450, 214], [1500, 256], [1552, 318], [1590, 292], [1560, 350], [360, 350], [330, 292], [368, 318], [420, 256]], '#454A58', { a: .12, spread: .05, edge: .4 });
-    for (let x = 440; x <= 1480; x += 22) wcStroke('g-tile' + x, [[lerp(470, 1450, (x - 440) / 1040), 222], [x + (x - 960) * .1, 344]], 7, 9, '#2E3240', { a: .08, layers: 4 });
+    // tile rows (瓦垄): even channels, alternately lit, with round tile ends (瓦当) along the eave
+    for (let i = 0, x = 400; x <= 1520; x += 20, i++) {
+      const u0 = (x - 400) / 1120, u1 = (x + 20 - 400) / 1120, top0 = lerp(476, 1444, u0), top1 = lerp(476, 1444, u1), b0 = x + (x - 960) * .06, b1 = x + 20 + (x + 20 - 960) * .06;
+      ctx.fillStyle = i % 2 ? 'rgba(58,62,78,.55)' : 'rgba(92,98,116,.45)'; ctx.beginPath(); ctx.moveTo(top0, 222); ctx.lineTo(top1, 222); ctx.lineTo(b1, 344); ctx.lineTo(b0, 344); ctx.closePath(); ctx.fill();
+      if (i % 2) { ctx.fillStyle = 'rgba(40,44,58,.8)'; ctx.beginPath(); ctx.arc((b0 + b1) / 2, 346, 7, 0, TAU); ctx.fill(); }
+    }
     wcStroke('g-ridge', [[455, 212], [960, 208], [1465, 212]], 22, 22, '#2B2F3C', { a: .14 });
     wcStroke('g-kissL', [[462, 212], [448, 176], [470, 168]], 16, 8, '#2B2F3C', { a: .14 });
     wcStroke('g-kissR', [[1458, 212], [1472, 176], [1450, 168]], 16, 8, '#2B2F3C', { a: .14 });
@@ -1780,10 +1810,13 @@ function deer(x, y, s, o = {}) {
 function landL(key, x, y, w, h, skyCols, groundCols, hy) {
   layer(key, x, y, w, h, () => {
     const g = ctx.createLinearGradient(0, y, 0, hy); skyCols.forEach((c, i) => g.addColorStop(i / (skyCols.length - 1), c)); ctx.fillStyle = g; ctx.fillRect(x, y, w, hy - y);
+    for (let i = 0; i < 7; i++) { const cx = x + (i + .3) * w / 7 + hash(key, i) * 200, cy = y + (hy - y) * (.25 + hash(key, i, 1) * .4); ctx.save(); ctx.translate(cx, cy); ctx.scale(1, .22); const r = 260 + hash(key, i, 2) * 220, gg = ctx.createRadialGradient(0, 0, 0, 0, 0, r); gg.addColorStop(0, rgba(mix(skyCols[skyCols.length - 1], '#FFFFFF', .35), .35)); gg.addColorStop(1, rgba(skyCols[skyCols.length - 1], 0)); ctx.fillStyle = gg; ctx.fillRect(-r, -r, 2 * r, 2 * r); ctx.restore(); }
+    // two soft ranges of distant hills
+    for (const [k, dy, amp, c] of [[0, -46, 40, mix(skyCols[skyCols.length - 1], groundCols[0], .45)], [1, -14, 26, mix(skyCols[skyCols.length - 1], groundCols[0], .75)]]) {
+      ctx.beginPath(); ctx.moveTo(x, hy + 10); for (let xx = x; xx <= x + w; xx += 40) ctx.lineTo(xx, hy + dy - amp * (.5 + .5 * Math.sin(xx * .0021 + k * 2 + hash(key, k) * 6)) * (.6 + .4 * Math.sin(xx * .0007 + k))); ctx.lineTo(x + w, hy + 10); ctx.closePath(); ctx.fillStyle = c; ctx.fill();
+    }
     const g2 = ctx.createLinearGradient(0, hy, 0, y + h); groundCols.forEach((c, i) => g2.addColorStop(i / (groundCols.length - 1), c)); ctx.fillStyle = g2; ctx.fillRect(x, hy, w, y + h - hy);
-    wcBands(key + 't', x, y, w, hy - y, skyCols.map(c => mix(c, '#FFFFFF', .2)), { a: .03 });
-    wc(key + 'hz', [[x, hy + 6], [x + w * .3, hy - 14], [x + w * .6, hy + 2], [x + w, hy - 10], [x + w, hy + 40], [x, hy + 40]], groundCols[0], { a: .12, spread: .2 });
-    for (let i = 0; i < 30; i++) wcStroke(key + 'gs' + i, [[x + hash(key, i) * w, hy + 40 + hash(key, i, 1) * (y + h - hy)], [x + hash(key, i) * w + 160, hy + 40 + hash(key, i, 1) * (y + h - hy)]], 14, 4, mix(groundCols[1], '#000000', .15), { a: .05, wet: true });
+    for (let i = 0; i < 40; i++) { const gx = x + hash(key, i) * w, gy = hy + 30 + Math.pow(hash(key, i, 1), 1.5) * (y + h - hy); wcStroke(key + 'gs' + i, [[gx, gy], [gx + 80 + (gy - hy) * .3, gy + 2]], 6 + (gy - hy) * .02, 2, mix(groundCols[1], '#000000', .12), { a: .05, wet: true }); }
   });
 }
 const BT_RIVER = [[-700, 600], [-100, 612], [500, 600], [1000, 640], [1350, 720], [1150, 820], [800, 900], [1000, 1040], [1800, 1130], [2700, 1080], [3400, 1000], [4000, 960]];

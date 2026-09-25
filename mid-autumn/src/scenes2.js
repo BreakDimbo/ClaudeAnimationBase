@@ -322,10 +322,13 @@ function deer(x, y, s, o = {}) {
 function landL(key, x, y, w, h, skyCols, groundCols, hy) {
   layer(key, x, y, w, h, () => {
     const g = ctx.createLinearGradient(0, y, 0, hy); skyCols.forEach((c, i) => g.addColorStop(i / (skyCols.length - 1), c)); ctx.fillStyle = g; ctx.fillRect(x, y, w, hy - y);
+    for (let i = 0; i < 7; i++) { const cx = x + (i + .3) * w / 7 + hash(key, i) * 200, cy = y + (hy - y) * (.25 + hash(key, i, 1) * .4); ctx.save(); ctx.translate(cx, cy); ctx.scale(1, .22); const r = 260 + hash(key, i, 2) * 220, gg = ctx.createRadialGradient(0, 0, 0, 0, 0, r); gg.addColorStop(0, rgba(mix(skyCols[skyCols.length - 1], '#FFFFFF', .35), .35)); gg.addColorStop(1, rgba(skyCols[skyCols.length - 1], 0)); ctx.fillStyle = gg; ctx.fillRect(-r, -r, 2 * r, 2 * r); ctx.restore(); }
+    // two soft ranges of distant hills
+    for (const [k, dy, amp, c] of [[0, -46, 40, mix(skyCols[skyCols.length - 1], groundCols[0], .45)], [1, -14, 26, mix(skyCols[skyCols.length - 1], groundCols[0], .75)]]) {
+      ctx.beginPath(); ctx.moveTo(x, hy + 10); for (let xx = x; xx <= x + w; xx += 40) ctx.lineTo(xx, hy + dy - amp * (.5 + .5 * Math.sin(xx * .0021 + k * 2 + hash(key, k) * 6)) * (.6 + .4 * Math.sin(xx * .0007 + k))); ctx.lineTo(x + w, hy + 10); ctx.closePath(); ctx.fillStyle = c; ctx.fill();
+    }
     const g2 = ctx.createLinearGradient(0, hy, 0, y + h); groundCols.forEach((c, i) => g2.addColorStop(i / (groundCols.length - 1), c)); ctx.fillStyle = g2; ctx.fillRect(x, hy, w, y + h - hy);
-    wcBands(key + 't', x, y, w, hy - y, skyCols.map(c => mix(c, '#FFFFFF', .2)), { a: .03 });
-    wc(key + 'hz', [[x, hy + 6], [x + w * .3, hy - 14], [x + w * .6, hy + 2], [x + w, hy - 10], [x + w, hy + 40], [x, hy + 40]], groundCols[0], { a: .12, spread: .2 });
-    for (let i = 0; i < 30; i++) wcStroke(key + 'gs' + i, [[x + hash(key, i) * w, hy + 40 + hash(key, i, 1) * (y + h - hy)], [x + hash(key, i) * w + 160, hy + 40 + hash(key, i, 1) * (y + h - hy)]], 14, 4, mix(groundCols[1], '#000000', .15), { a: .05, wet: true });
+    for (let i = 0; i < 40; i++) { const gx = x + hash(key, i) * w, gy = hy + 30 + Math.pow(hash(key, i, 1), 1.5) * (y + h - hy); wcStroke(key + 'gs' + i, [[gx, gy], [gx + 80 + (gy - hy) * .3, gy + 2]], 6 + (gy - hy) * .02, 2, mix(groundCols[1], '#000000', .12), { a: .05, wet: true }); }
   });
 }
 const BT_RIVER = [[-700, 600], [-100, 612], [500, 600], [1000, 640], [1350, 720], [1150, 820], [800, 900], [1000, 1040], [1800, 1130], [2700, 1080], [3400, 1000], [4000, 960]];

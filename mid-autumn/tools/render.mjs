@@ -18,7 +18,9 @@ const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { std
 
 if (args.encode) {
   const out = resolve(ROOT, args.out || '日色变得慢.mp4'), wav = ROOT + '/build/audio.wav';
-  const fps = 24;
+  const fps = 24, need = 180 * fps, missing = [];
+  for (let i = 0; i < need; i++) if (!existsSync(`${FRAMES}/f${String(i).padStart(5, '0')}.jpg`)) missing.push(i);
+  if (missing.length) { console.error(`missing ${missing.length} frames, first ${missing.slice(0, 5).join(', ')}; render them before encoding`); process.exit(1); }
   await run(FFMPEG, ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', `${FRAMES}/f%05d.jpg`, '-i', wav,
     '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', String(args.crf || 20), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]);
