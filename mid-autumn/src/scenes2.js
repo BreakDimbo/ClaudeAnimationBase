@@ -77,7 +77,7 @@ function S3(lt, t) {
     const rx = lerp(60, 2700, seg(lt, 3, 6)), ph = (rx - 60) / 300;
     xaLanterns((i, x) => i === 7 ? 1 : lt < 3 ? 0 : clamp((rx - x) / 90), t);
     if (first) bunny(XA_LAN[7], 606, 22, t, { glow: .25 });
-    else bunny(rx, 500 - Math.abs(Math.sin(ph * Math.PI)) * 70, 60, t, { glow: .25 });
+    else bunny(rx, 500 - Math.abs(Math.sin(ph * Math.PI)) * 70, 60, t, { glow: .25, air: lt < 6 ? ph % 1 : undefined });
     camEnd();
   } else if (lt < 9) {                            // 38–41 the bell rings: its sound spreads through the sky in rings of wash
     camBegin(960, 540, 1);
@@ -284,13 +284,27 @@ function deer(x, y, s, o = {}) {
   const hd = o.head ?? 0, run = o.run, k = s / 100;
   ctx.save(); ctx.translate(x, y); ctx.scale((o.flip ? -1 : 1) * k, k); if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
   const body = o.col || '#A8663A', dark = mix(body, '#3A2418', .45), lw = 1 / k;
-  const legs = [[-24, -56, 0], [-18, -56, .5], [24, -56, .25], [29, -56, .75]];
-  const legP = ([hx, hy, off], far) => {
-    let a1 = .05, a2 = 0;
-    if (run !== undefined && run !== null) { const p = (run + off) * TAU; a1 = Math.sin(p) * .75; a2 = Math.max(0, -Math.cos(p)) * 1.1 * (hx < 0 ? -1 : 1); }
-    const kx = hx + Math.sin(a1) * 28, ky = hy + Math.cos(a1) * 28, fx = kx + Math.sin(a1 + a2) * 28, fy = ky + Math.cos(a1 + a2) * 28;
-    return [[hx, hy], [kx, ky], [fx, fy]];
+  // a gallop: the hind pair lands and pushes off almost together, then the fore pair reaches out together.
+  // Each leg swings forward with its joint folded (foreleg: the knee folds the hoof back; hind: the hock lifts the hoof
+  // forward) and sweeps back straight while its hoof is on the ground. Standing: legs straight, a little splayed.
+  // legs: [hip x, hip y, phase offset, hind?]
+  const legs = [[-24, -56, 0, true], [-18, -56, .05, true], [24, -56, 0, false], [30, -56, .05, false]];
+  // keyframes over one stride [phase, leg angle (+ = reaching forward), fold]; the stride starts in the extended
+  // suspension (forelegs reaching, hind legs thrown back), then the forelegs land and sweep back, the hind legs fold
+  // forward under the belly, land, and push off.
+  const FORE = [[0, .75, 0], [.12, .5, 0], [.4, -.55, 0], [.55, -.35, 1.3], [.8, .35, 1], [1, .75, 0]];
+  const HIND = [[0, -.75, 0], [.22, -.2, .9], [.45, .45, .5], [.55, .5, 0], [.85, -.55, 0], [1, -.75, 0]];
+  const key = (K, p) => { p = ((p % 1) + 1) % 1; for (let i = 1; i < K.length; i++) if (p <= K[i][0]) { const u = ease((p - K[i - 1][0]) / (K[i][0] - K[i - 1][0])); return [lerp(K[i - 1][1], K[i][1], u), lerp(K[i - 1][2], K[i][2], u)]; } return [K[0][1], K[0][2]]; };
+  const legP = ([hx, hy, off, hind]) => {
+    let a = hind ? -.12 : .04, fold = 0;
+    if (run !== undefined && run !== null) [a, fold] = key(hind ? HIND : FORE, run + off);
+    const L1 = hind ? 30 : 27, L2 = 30;
+    const up = hind ? a - .22 : a, kx = hx + Math.sin(up) * L1, ky = hy + Math.cos(up) * L1;
+    const lo = hind ? a + .2 + fold : a - fold;
+    return [[hx, hy], [kx, ky], [kx + Math.sin(lo) * L2, ky + Math.cos(lo) * L2]];
   };
+  const bodyBob = run !== undefined && run !== null ? -Math.cos(run * TAU) * 5 - 3 : 0;
+  ctx.translate(0, bodyBob);
   legs.forEach((L, i) => { if (i % 2 === 1) { const P = legP(L); limb(P, 6, mix(dark, '#1A1A2A', .3)); } });
   wcAt('deer-body', UNIT(18), body, 0, -64, 18, { sx: 38 / 18, a: .16, spread: .12, edge: .4, mul: false });
   wcAt('deer-belly', UNIT(14), '#EED2A8', 2, -52, 7, { sx: 26 / 7, a: .14, spread: .2, mul: false, wet: true });
@@ -433,7 +447,8 @@ function S5(lt, t) {
     const DX = 1250, DY = 1250, DS = 720, k = DS / 100, ax = DX - k * 40, ay = DY - k * 150;
     moonWC(ax, lerp(1250, ay, easeOut(seg(lt, 10, 12))), 64, { glow: .8 });
     const dd = deer(DX, DY, DS, { head: hd, flip: true, t, col: '#7A5040' });
-    bunny(dd.antlers[0] + 6, dd.antlers[1] + 34, 92, t, { flip: true, glow: .25 });
+    { const k = seg(lt, 10.3, 10.9), [x, y] = arcPt([380, 900], [dd.antlers[0] + 6, dd.antlers[1] + 34], 260, ease(k));   // it hops up once the deer has lifted its head
+      if (lt > 9.9) bunny(x, y, 92, t, { flip: true, glow: .25, air: k > 0 && k < 1 ? k : undefined, alpha: seg(lt, 9.9, 10.3) }); }
     camEnd();
   } else if (lt < 15) {                           // 80–83 the deer runs across the grass; a flower opens in every hoofprint (pan right, following)
     const dx = lerp(200, 2600, seg(lt, 12, 15));
@@ -450,7 +465,7 @@ function S5(lt, t) {
     landL('btgr2', -400, -300, 2720, 1700, ['#4A4E8A', '#8A80B0', '#D8B0BC'], ['#6E8A5A', '#3E5A40'], 610);
     for (let i = 0; i < 40; i++) { const u = i / 40, y = lerp(1100, 610, Math.pow(u, .5)), x = 960 + Math.sin(u * 7) * 300 * (1 - u); flower(x, y, lerp(22, 4, Math.pow(u, .5)), 1, ['#F6E0F0', '#FFF4D0', '#E8C8F0'][i % 3]); }
     yurt('btyurt', 960, 600, 80, t);
-    { const u = seg(lt, 15, 18) * .75, x = 960 + Math.sin(u * 7) * 300 * (1 - u), y = lerp(1100, 610, Math.pow(u, .5)), sz = lerp(70, 16, Math.pow(u, .5)); bunny(x, y - Math.abs(Math.sin(lt * 2.6 * Math.PI)) * sz * .5, sz, t, { flip: Math.cos(u * 7) < 0 }); }
+    { const u = seg(lt, 15, 18) * .75, x = 960 + Math.sin(u * 7) * 300 * (1 - u), y = lerp(1100, 610, Math.pow(u, .5)), sz = lerp(70, 16, Math.pow(u, .5)); bunny(x, y - Math.abs(Math.sin(lt * 2.6 * Math.PI)) * sz * .5, sz, t, { flip: Math.cos(u * 7) < 0, air: (lt * 1.3) % 1 }); }
     camEnd();
   }
 }

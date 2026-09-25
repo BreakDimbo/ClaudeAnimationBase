@@ -1,7 +1,7 @@
 // ───────────────────────── main: render(t), the timeline, preview player, export hooks ─────────────────────────
 // SHOTS: [start, fn(lt, t, dur), name, into] from scenes.js; each shot paints the whole frame.
 // into = how the shot arrives: {d: seconds before its start, type: 'dissolve' | 'ripple', x, y}
-const SHOT_LIST = SHOTS.map((s, i) => ({ start: s[0], end: i + 1 < SHOTS.length ? SHOTS[i + 1][0] : DUR, fn: s[1], name: s[2] || '', into: s[3] || null }));
+const SHOT_LIST = SHOTS.map((s, i) => ({ start: s[0], end: i + 1 < SHOTS.length ? SHOTS[i + 1][0] : STORY, fn: s[1], name: s[2] || '', into: s[3] || null }));
 makeWCPaper();
 let VIEW = null;           // a test view (?view=cast) instead of the film
 function shotAt(t) { let i = SHOT_LIST.length - 1; while (i > 0 && t < SHOT_LIST[i].start) i--; return i; }
@@ -21,11 +21,35 @@ function overlayShot(i, t, a) {
   drawShot(i, t); ctx = main; BF = bf;
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = clamp(a); ctx.drawImage(BUF, 0, 0); ctx.restore();
 }
-// the one entry point: every frame is a pure function of t (seconds)
-function render(t) {
-  t = clamp(t, 0, DUR - 1e-4);
-  BF = Math.floor(t * BOIL + 1e-6);
-  if (VIEW) { paperUnder(); VIEW(t); grainOver(); return; }
+// ── the cut: the shots are written on the 180 s storyboard timeline; the film plays chosen stretches of it,
+// each at its own pace, in 120 s. [story start, story end, film seconds]
+const EDIT = [
+  [0, 14, 10.5],                                   // 镜1 向阳门第·晨
+  [14, 20, 5], [23, 26, 2.6], [29, 32, 2.6],       // 镜2 北京 (the persimmons ripening and the dagoba are cut)
+  [32, 35, 2.4], [38, 50, 9.6],                    // 镜3 包头 (the deer drinking is cut)
+  [50, 59, 7.2], [62, 68, 4.8],                    // 镜4 呼和浩特 (the moon sliding in is cut)
+  [68, 74, 4.8], [77, 86, 7.4],                    // 镜5 西安 (the bell tower is cut)
+  [86, 92, 4.6], [95, 104, 7.2],                   // 镜6 新加坡 (the frangipani is cut)
+  [104, 107, 2.2], [107, 116, 5.2], [116, 128, 7.9],   // 镜7 从前慢
+  [128, 131, 2.2], [134, 140, 4.8], [143, 152, 7.2],   // 镜8 夜 (the cranes landing and the floret are cut)
+  [152, 173, 16.1],                                // 镜9 背影 · 赏月 · 团圆
+  [173, 180, 5.7],                                 // 镜10 纸
+];
+const EDIT_AT = []; { let f = 0; for (const [a, b, d] of EDIT) { EDIT_AT.push([a, b, f, f + d]); f += d; } }
+// film time → story time
+function toStory(T) { for (const [a, b, f0, f1] of EDIT_AT) if (T < f1) return lerp(a, b, clamp((T - f0) / (f1 - f0))); return STORY - 1e-4; }
+// story time → film time; inside a cut stretch: null, or (collapse) the nearest cut point
+function toFilm(t, collapse = false) {
+  for (const [a, b, f0, f1] of EDIT_AT) { if (t < a) return collapse ? f0 : null; if (t <= b) return lerp(f0, f1, (t - a) / (b - a)); }
+  return collapse ? DUR : null;
+}
+window.toStory = toStory; window.toFilm = toFilm;
+// the one entry point: every frame is a pure function of t (film seconds)
+function render(T) {
+  T = clamp(T, 0, DUR - 1e-4);
+  BF = Math.floor(T * BOIL + 1e-6);
+  if (VIEW) { paperUnder(); VIEW(T); grainOver(); return; }
+  const t = toStory(T);
   const i = shotAt(t), nx = SHOT_LIST[i + 1];
   drawShot(i, t);
   if (nx && nx.into && t > nx.start - nx.into.d) {          // the next shot arriving early: a dissolve or a ripple

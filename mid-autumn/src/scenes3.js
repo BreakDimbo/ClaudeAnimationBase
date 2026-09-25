@@ -547,3 +547,4 @@ const SHOTS = [
 ];
 VIEWS.cast = (t) => { Object.keys(ROLE).forEach((r, i) => puppet(r, 'back', 120 + i * 112, 1000, 700, { t })); };
 VIEWS.mains = (t) => { const R = ['daidai', 'erjiumu', 'erjiu', 'lulu', 'wo', 'baba', 'mama', 'laoye', 'laolao', 'doudou', 'daju', 'tongtong', 'sanyifu', 'sanyi', 'rere', 'eryi']; R.forEach((r, i) => puppet(r, 'main', 70 + i * 118, 1000, 560, { t })); };
+VIEWS.gait = (T) => { camBegin(960, 540, 1); for (let i = 0; i < 8; i++) { deer(160 + i * 230, 420, 190, { run: i / 8, t: T }); bunny(160 + i * 230, 900, 110, T, { air: i < 7 ? i / 7 : undefined }); } camEnd(); };

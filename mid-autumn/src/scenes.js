@@ -105,7 +105,7 @@ function hopPath(lt, K, h = 40, dur = .4) {
   if (lt <= K[0][0]) return { x: K[0][1], y: K[0][2], flip: K.length > 1 ? K[1][1] < K[0][1] : false };
   for (let i = 1; i < K.length; i++) if (lt < K[i][0]) {
     const a = K[i - 1], b = K[i], d = Math.min(dur, b[0] - a[0]), k = seg(lt, b[0] - d, b[0]), flip = b[1] === a[1] ? (i > 1 ? a[1] < K[i - 2][1] : false) : b[1] < a[1];
-    const [x, y] = arcPt([a[1], a[2]], [b[1], b[2]], h, k); return { x, y, flip, air: k > 0 && k < 1 };
+    const [x, y] = arcPt([a[1], a[2]], [b[1], b[2]], h, k); return { x, y, flip, air: k > 0 && k < 1 ? k : undefined };
   }
   const L = K[K.length - 1], P = K[K.length - 2]; return { x: L[1], y: L[2], flip: P ? L[1] < P[1] || (L[1] === P[1] && false) : false };
 }
@@ -114,7 +114,7 @@ function bunny(x, y, s, t, o = {}) {
   wcGlow(x, y - s * .5, s * 1.6, '#EAF0FF', o.glow ?? .16);
   rabbit(x, y, s, t, o);
 }
-const bunnyAt = (p, s, t, o = {}) => bunny(p.x, p.y, s, t, { flip: p.flip, ...o });
+const bunnyAt = (p, s, t, o = {}) => bunny(p.x, p.y, s, t, { flip: p.flip, air: p.air, ...o });
 // the crane with the rabbit riding on its back
 function craneRider(x, y, s, flap, t, o = {}) {
   crane(x, y, s, flap, o);
@@ -298,7 +298,7 @@ const LIGHT_AT = [4.5, 6.6, 7.4, 8.2];            // 向 阳 门 第 turn gold (
 const S1_HOPS = [[2.7, 960, 206], [3.7, 1210, 372], [4.4, 1150, 372], [6.5, 1024, 372], [7.3, 897, 372], [8.1, 770, 372], [9.7, 1110, 910], [10.7, 1040, 936]];
 function s1Rabbit(lt, t) {
   if (lt < 1.3) return;
-  if (lt < 2.7) { const k = seg(lt, 1.3, 2.7), [x, y] = arcPt([230, 190], [960, 206], 110, ease(k)); for (let i = 1; i < 6; i++) { const [tx, ty] = arcPt([230, 190], [960, 206], 110, ease(clamp(k - i * .04))); wcGlow(tx, ty - 10, 24, '#FFF4D0', .12); } bunny(x, y, 50, t, { glow: .3 }); return; }
+  if (lt < 2.7) { const k = seg(lt, 1.3, 2.7), [x, y] = arcPt([230, 190], [960, 206], 110, ease(k)); for (let i = 1; i < 6; i++) { const [tx, ty] = arcPt([230, 190], [960, 206], 110, ease(clamp(k - i * .04))); wcGlow(tx, ty - 10, 24, '#FFF4D0', .12); } bunny(x, y, 50, t, { glow: .3, air: .25 + .5 * k }); return; }
   if (lt > 12.1) return;
   const K = lt < 11 ? S1_HOPS : [...S1_HOPS, [12.1, 975, 918]];
   bunnyAt(hopPath(lt, K, 50), lt > 9.5 ? 64 : 50, t);

@@ -57,24 +57,52 @@ function moonWC(x, y, r, o = {}) {
 }
 
 // the jade rabbit: a little watercolour animal made of washes and one pencil eye. facing right; hop k 0..1 arcs.
+// o.air: 0..1 through a hop (undefined = sitting). Sitting: a long hind foot flat on the ground, the haunch round
+// over it, small front paws under the chest. Take-off: hind legs push out behind, body stretched and tipped up.
+// Landing: front paws reach down first, hind feet swing forward under the body.
 function rabbit(x, y, s, t, o = {}) {
-  const k = o.hop ?? 0, dy = -Math.sin(clamp(k) * Math.PI) * s * .9, stretch = Math.sin(clamp(k) * Math.PI) * .12;
-  ctx.save(); ctx.translate(x, y + dy); ctx.scale((o.flip ? -1 : 1) * s / 100, s / 100 * (1 - stretch * .3));
+  const air = o.air ?? (o.hop > 0 && o.hop < 1 ? o.hop : undefined);
+  const up = air === undefined ? 0 : (o.hop !== undefined && o.air === undefined ? Math.sin(air * Math.PI) * .9 : 0);
+  ctx.save(); ctx.translate(x, y - up * s); ctx.scale((o.flip ? -1 : 1) * s / 100, s / 100);
   if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
   const body = '#FBFAF6', shade = '#A8B2D4', ink = 'rgba(70,66,100,.85)', lw = Math.max(1.6, 150 / s);
-  const line = (P, close = true) => { ctx.beginPath(); P.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); if (close) ctx.closePath(); ctx.strokeStyle = ink; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.stroke(); };
-  wcAt('rab-shadow', UNIT(10), '#6C6A90', 0, 2 - dy * 100 / s, 55, { sy: .15, a: .06, wet: true, gran: 0 });
-  const ear = Math.sin(t * 5 + (o.ph || 0)) * .08;
-  // far ear, body, tail, head, near ear: opaque white paint so it reads on dark washes too
-  ctx.save(); ctx.translate(58, -98); ctx.rotate(.08 - ear); const E2 = ellPts(0, -30, 8, 31, 14); wc('rab-ear2', E2, mix(body, shade, .25), { a: .2, spread: .15, mul: false, edge: 0 }); line(E2); ctx.restore();
-  const B = ellPts(0, -40, 56, 39, 22); wc('rab-body', B, body, { a: .2, spread: .15, mul: false, edge: 0 });
-  wc('rab-bshade', ellPts(-6, -24, 46, 18, 14), shade, { a: .06, spread: .35, wet: true });
-  line(B);
-  const T = ellPts(-55, -50, 11, 10, 10); wc('rab-tail', T, body, { a: .2, mul: false, edge: 0 }); line(T);
-  limb([[-10, -30], [-4, -12], [-26, -2]], lw, ink);                 // haunch
-  limb([[34, -18], [38, -2], [48, -1]], lw, ink);                     // front paw
-  const Hd = ellPts(54, -76, 27, 23, 16); wc('rab-head', Hd, body, { a: .2, spread: .15, mul: false, edge: 0 }); line(Hd);
-  ctx.save(); ctx.translate(42, -94); ctx.rotate(-.3 + ear); const E1 = ellPts(0, -34, 9, 34, 14); wc('rab-ear1', E1, body, { a: .2, spread: .15, mul: false, edge: 0 }); wc('rab-ear1i', ellPts(0, -30, 4, 24, 10), '#F2A7B4', { a: .12, spread: .3, wet: true, mul: false }); line(E1); ctx.restore();
+  const outline = () => { ctx.strokeStyle = ink; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke(); };
+  const fillW = (c = body) => { ctx.fillStyle = c; ctx.fill(); };
+  // pose: body pitch, hind leg (thigh angle, foot angle), fore leg angle
+  let pitch = 0, hindA = 0, footA = 0, foreA = 0, lift = 0;
+  if (air !== undefined) {
+    const k = air;
+    // (angles clockwise; the foot lies forward when sitting, and points back and down when the leg is thrown out)
+    if (k < .5) { const u = k / .5, e = Math.sin(Math.min(1, u * 1.6) * Math.PI / 2); pitch = -.4 * Math.sin(u * Math.PI * .9); hindA = .5 * e; footA = 2.6 * e; foreA = .4 * e; lift = e * 10; }
+    else { const u = (k - .5) / .5; pitch = .3 * Math.sin(u * Math.PI); hindA = .5 * (1 - u) - .35 * Math.sin(u * Math.PI); footA = 2.6 * (1 - u) * (1 - u); foreA = .4 * (1 - u) - .9 * Math.sin(u * Math.PI * .8); lift = 10 * (1 - u); }
+  }
+  if (air === undefined) wcAt('rab-shadow', UNIT(10), '#6C6A90', 0, 2, 55, { sy: .15, a: .06, wet: true, gran: 0 });
+  ctx.translate(0, -lift); ctx.rotate(pitch);
+  const ear = Math.sin(t * 5 + (o.ph || 0)) * .08 + (air !== undefined ? -.25 * Math.sin(air * Math.PI) : 0);
+  // far ear
+  ctx.save(); ctx.translate(58, -98); ctx.rotate(.08 - ear); ctx.beginPath(); ctx.ellipse(0, -30, 8, 31, 0, 0, TAU); fillW(mix(body, shade, .25)); outline(); ctx.restore();
+  // far hind foot (a sliver behind the near one) and far front paw
+  ctx.save(); ctx.translate(-20, -18); ctx.rotate(hindA); ctx.translate(0, 18); ctx.rotate(footA - hindA);
+  ctx.beginPath(); ctx.ellipse(8, -2, 26, 7, 0, 0, TAU); fillW(mix(body, shade, .3)); outline(); ctx.restore();
+  ctx.save(); ctx.translate(40, -22); ctx.rotate(foreA); ctx.beginPath(); ctx.ellipse(-2, 12, 6, 14, .15, 0, TAU); fillW(mix(body, shade, .3)); outline(); ctx.restore();
+  // body
+  ctx.beginPath(); ctx.ellipse(2, -42, 54 + (air !== undefined ? 6 * Math.sin(air * Math.PI) : 0), 36, -.12, 0, TAU); fillW(); outline();
+  ctx.save(); ctx.beginPath(); ctx.ellipse(2, -42, 54, 36, -.12, 0, TAU); ctx.clip(); ctx.globalAlpha *= .22; ctx.beginPath(); ctx.ellipse(6, -14, 52, 20, 0, 0, TAU); fillW(shade); ctx.restore();
+  // tail
+  ctx.beginPath(); ctx.arc(-52, -52, 10, 0, TAU); fillW(); outline();
+  // near hind leg: the round haunch, and the long foot hinged at its heel
+  ctx.save(); ctx.translate(-20, -18); ctx.rotate(hindA);
+  ctx.beginPath(); ctx.ellipse(0, -14, 26, 22, -.2, 0, TAU); fillW(); ctx.beginPath(); ctx.ellipse(0, -14, 26, 22, -.2, -2.9, .5); outline();
+  ctx.translate(-8, 16); ctx.rotate(footA - hindA);
+  ctx.beginPath(); ctx.moveTo(-6, -6); ctx.quadraticCurveTo(20, -9, 40, -4); ctx.quadraticCurveTo(46, 0, 40, 4); ctx.lineTo(-4, 4); ctx.quadraticCurveTo(-10, 0, -6, -6); fillW(); outline();
+  ctx.restore();
+  // near front leg: a short foreleg with a round paw
+  ctx.save(); ctx.translate(36, -24); ctx.rotate(foreA);
+  ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-5, 18); ctx.quadraticCurveTo(0, 26, 9, 22); ctx.lineTo(7, 0); fillW(); outline(); ctx.restore();
+  // head and near ear
+  ctx.beginPath(); ctx.ellipse(54, -76, 27, 23, 0, 0, TAU); fillW(); outline();
+  ctx.save(); ctx.translate(42, -94); ctx.rotate(-.3 + ear); ctx.beginPath(); ctx.ellipse(0, -34, 9, 34, 0, 0, TAU); fillW(); outline();
+  ctx.beginPath(); ctx.ellipse(0, -30, 4, 24, 0, 0, TAU); ctx.fillStyle = 'rgba(242,167,180,.6)'; ctx.fill(); ctx.restore();
   ctx.fillStyle = '#2A2233'; ctx.beginPath(); ctx.arc(62, -81, 3.6, 0, TAU); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(63.2, -82.4, 1.2, 0, TAU); ctx.fill();
   ctx.fillStyle = '#F29BB0'; ctx.beginPath(); ctx.arc(80, -73, 3, 0, TAU); ctx.fill();

@@ -1,5 +1,5 @@
 // ───────────────────────── core: seeded random, time helpers, pencil painting, camera ─────────────────────────
-const W = 1920, H = 1080, FPS = 24, DUR = 180, BOIL = 12;
+const W = 1920, H = 1080, FPS = 24, DUR = 120, STORY = 180, BOIL = 12;   // DUR: the film; STORY: the storyboard timeline the shots are written on
 const cv = document.getElementById('cv');
 let ctx = cv.getContext('2d');
 const TAU = Math.PI * 2;
