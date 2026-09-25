@@ -49,7 +49,7 @@ function hop(t, t0, t1, h) {
 
 // ── colour ──
 const PAL = {
-  paper: '#F3E9D4', paper2: '#EADCC0', ink: '#252C4A', inkSoft: '#4A4F6E',
+  paper: '#F3E9D4', paper2: '#EADCC0', ink: '#1F2A52', inkSoft: '#4A4F6E',
   red: '#D8452E', redDk: '#A8322A', rose: '#EE7D86', pink: '#F29BB0',
   gold: '#F2B845', moon: '#FBE3A0', moonHi: '#FFF4D6', amber: '#E9953A',
   jade: '#5E9E8C', jadeDk: '#3F7467', sage: '#9DB99A',
@@ -69,26 +69,35 @@ const lit = c => LIGHT && LIGHTK > 0 ? mix(c, LIGHT, Math.round(LIGHTK * 20) / 2
 
 // ── pencil textures: one tile per colour, cached; diagonal colour-pencil strokes with paper tooth ──
 const PAT = new Map();
-function pencilTile(col) {
+function pencilTile(col, kind = 'fill') {
+  // colour-pencil / crayon tile like the reference portraits: tone strokes of the local colour,
+  // plus stray warm and cool strokes, plus paper tooth
   const S = 192, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
-  const r = mulberry(skey(col) ^ 0x51ed);
-  g.fillStyle = col; g.fillRect(0, 0, S, S);
-  const dk = mix(col, PAL.ink, .3), lt = mix(col, '#FFF6E6', .32);
+  const r = mulberry(skey(col + kind) ^ 0x51ed);
+  const L = lum(col);
+  if (kind === 'fill') { g.fillStyle = col; g.fillRect(0, 0, S, S); }
+  const dk = mix(col, '#1E2A5A', .38), lt = mix(col, '#FFF4DC', .34);
+  const warm = L < .3 ? '#C9793A' : '#F0A23A', cool = L < .3 ? '#5A7AC0' : '#3F74B8', rose = '#E8604A';
+  const passes = kind === 'fill'
+    ? [[dk, 800, -.72, 4, 12, .1, .24], [lt, 520, -1.1, 4, 11, .1, .24], [warm, 170, -.8, 6, 14, .08, .2], [cool, 150, -.62, 6, 14, .08, .2], [rose, 80, -.95, 5, 12, .06, .16], [dk, 180, -.72, 12, 22, .06, .12]]
+    : kind === 'shade'
+    ? [[mix(col, '#1C2A66', .55), 900, -.75, 5, 13, .18, .34], [cool, 260, -.6, 5, 12, .12, .24], [rose, 60, -.9, 5, 10, .08, .16]]
+    : [[mix(col, '#FFE08A', .6), 700, -1.0, 5, 12, .14, .28], [mix(col, '#FFF8E8', .6), 300, -.8, 4, 9, .12, .24], [rose, 50, -1.1, 4, 9, .06, .12]];
   g.lineCap = 'round';
-  for (let pass = 0; pass < 3; pass++) {
-    const n = [700, 420, 160][pass], ang = [-.72, -1.1, -.72][pass], L0 = [4, 4, 10][pass], L1 = [9, 8, 18][pass];
-    const colr = [dk, lt, dk][pass], a0 = [.1, .1, .07][pass], a1 = [.2, .2, .13][pass];
+  for (const [colr, n, ang, L0, L1, a0, a1] of passes) {
     for (let i = 0; i < n; i++) {
-      const x = r() * S, y = r() * S, L = L0 + r() * L1, dx = Math.cos(ang) * L, dy = Math.sin(ang) * L;
-      g.strokeStyle = rgba(colr, a0 + r() * (a1 - a0)); g.lineWidth = .7 + r() * 1.1;
+      const x = r() * S, y = r() * S, len = L0 + r() * L1, an = ang + (r() - .5) * .25, dx = Math.cos(an) * len, dy = Math.sin(an) * len;
+      g.strokeStyle = rgba(colr, a0 + r() * (a1 - a0)); g.lineWidth = .7 + r() * 1.2;
       for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) { g.beginPath(); g.moveTo(x + ox, y + oy); g.lineTo(x + dx + ox, y + dy + oy); g.stroke(); }
     }
   }
-  for (let i = 0; i < 900; i++) { g.fillStyle = rgba('#FFF8EA', .05 + r() * .18); g.fillRect(r() * S, r() * S, 1 + r() * 1.4, 1); }
+  if (kind === 'fill') for (let i = 0; i < 1100; i++) { g.fillStyle = rgba(r() < .7 ? '#FFF8EA' : '#1E2A5A', .05 + r() * .14); g.fillRect(r() * S, r() * S, 1 + r() * 1.4, 1); }
   return ctx.createPattern(c, 'repeat');
 }
-function pencil(col, sc = 1, ax = 0, ay = 0) {
-  let p = PAT.get(col); if (!p) { if (PAT.size > 600) PAT.clear(); p = pencilTile(col); PAT.set(col, p); }
+function lum(h) { const [r, g, b] = hex(h); return (r * .3 + g * .59 + b * .11) / 255; }
+function pencil(col, sc = 1, ax = 0, ay = 0, kind = 'fill') {
+  const key = col + kind;
+  let p = PAT.get(key); if (!p) { if (PAT.size > 900) PAT.clear(); p = pencilTile(col, kind); PAT.set(key, p); }
   // the hatching itself boils: each drawing shifts the tile a little
   const o = (BF % 3) * 23;
   p.setTransform(new DOMMatrix().translate(ax + o, ay + o * .6).scale(sc));
@@ -116,18 +125,38 @@ function tracePath(P, closed, curv) {
 }
 // paint a closed shape: pencil fill, riso offset rim, wobbly ink outline
 // o: {fill, flat, alpha, ink, sw, rim, rimCol, curv, wob, sc, ax, ay}
+// paint a closed shape the way the reference portraits are drawn: two misregistered colour rims (coral, gold),
+// colour-pencil fill, a warm light edge (top-left) and a cool hatched shadow edge (bottom-right), a dark-blue ink line.
+// o: {fill, flat, alpha, ink, sw, rim, rimCol, curv, wob, sc, ax, ay, band}
 function shape(pts, o = {}) {
   const wa = o.wob ?? 1.2, P = wobblePts(pts, wa), curv = o.curv ?? 1;
   const a = o.alpha ?? 1;
-  if (o.rim) {                      // misregistered colour plate, offset down-right
-    ctx.save(); ctx.globalAlpha = a * .75; ctx.translate(o.rimX ?? 3.2, o.rimY ?? 2.4);
-    tracePath(P, true, curv); ctx.lineWidth = (o.sw ?? 2) * 1.6; ctx.strokeStyle = o.rimCol || PAL.red; ctx.stroke(); ctx.restore();
+  if (o.rim) {
+    const rx = o.rimX ?? 3.2, ry = o.rimY ?? 2.4, w = o.rimW ?? (o.sw ?? 2) * 1.5;
+    ctx.save(); ctx.globalAlpha = a * .85; ctx.translate(rx, ry); tracePath(P, true, curv); ctx.lineWidth = w; ctx.strokeStyle = o.rimCol || '#E8563E'; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.globalAlpha = a * .55; ctx.translate(rx * .2, ry * 1.2); tracePath(P, true, curv); ctx.lineWidth = w * .8; ctx.strokeStyle = '#3F6BC0'; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.globalAlpha = a * .7; ctx.translate(-rx * .8, -ry * .7); tracePath(P, true, curv); ctx.lineWidth = w * .9; ctx.strokeStyle = o.rimCol2 || '#F2B53A'; ctx.stroke(); ctx.restore();
   }
   if (o.fill) {
+    const col = lit(o.fill);
     tracePath(P, true, curv);
     ctx.globalAlpha = a;
-    ctx.fillStyle = o.flat ? lit(o.fill) : pencil(lit(o.fill), (o.sc ?? 1) * HATCH, o.ax ?? 0, o.ay ?? 0);
+    ctx.fillStyle = o.flat ? col : pencil(col, (o.sc ?? 1) * HATCH, o.ax ?? 0, o.ay ?? 0);
     ctx.fill();
+    // light and shadow edges
+    let b = o.band;
+    if (b === undefined && !o.flat) { let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const [x, y] of P) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } b = clamp(Math.min(x1 - x0, y1 - y0) * .16, 0, 60); if (b < 3) b = 0; }
+    if (b > 0 && !o.flat) {
+      ctx.save(); tracePath(P, true, curv); ctx.clip();
+      const off = (dx, dy, kind, al) => {
+        ctx.beginPath(); ctx.rect(-1e5, -1e5, 2e5, 2e5);
+        const Q = P.map(([x, y]) => [x + dx, y + dy]); tracePathAppend(Q, curv);
+        ctx.globalAlpha = a * al; ctx.fillStyle = pencil(col, (o.sc ?? 1) * HATCH, o.ax ?? 0, o.ay ?? 0, kind); ctx.fill('evenodd');
+      };
+      off(-b, -b * .9, 'shade', 1);
+      off(b * .7, b * .7, 'light', .75);
+      ctx.restore();
+    }
     ctx.globalAlpha = 1;
   }
   if (o.ink !== null && o.ink !== undefined || o.sw) {
@@ -138,6 +167,15 @@ function shape(pts, o = {}) {
       ctx.globalAlpha = 1;
     }
   }
+}
+// the same path as tracePath, appended to the current path (for even-odd bands)
+function tracePathAppend(P, curv) {
+  const n = P.length;
+  if (!curv || n < 3) { ctx.moveTo(P[0][0], P[0][1]); for (let i = 1; i < n; i++) ctx.lineTo(P[i][0], P[i][1]); ctx.closePath(); return; }
+  const m = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  const s0 = m(P[n - 1], P[0]); ctx.moveTo(s0[0], s0[1]);
+  for (let i = 0; i < n; i++) { const q = m(P[i], P[(i + 1) % n]); ctx.quadraticCurveTo(P[i][0], P[i][1], q[0], q[1]); }
+  ctx.closePath();
 }
 // wobbly pencil line; double-struck like a real pencil
 function line(pts, sw = 2, col = PAL.ink, o = {}) {
