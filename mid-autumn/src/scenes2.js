@@ -20,7 +20,7 @@ function xaWall() {
     XA_LAN.forEach((x, i) => limb([[x, 568], [x, 598]], 2, 'rgba(30,20,30,.7)'));
   });
 }
-function xaLanterns(lit, t) { XA_LAN.forEach((x, i) => { const l = lit(i, x); if (l > 0) glow(x, 700, 220, '#FF9A50', .22 * l); lanternWC(x, 640, 40, l, Math.sin(t * 1.3 + i * .7) * .04, 'xal' + i); }); }
+function xaLanterns(lit, t, wind = 0) { XA_LAN.forEach((x, i) => { const l = lit(i, x); if (l > 0) glow(x, 700, 220, '#FF9A50', .22 * l); lanternWC(x, 640, 40, l, Math.sin(t * 1.3 + i * .7) * .04 * (1 - wind) - .22 * wind + Math.sin(t * 5 + i) * .03 * wind, 'xal' + i); }); }
 function bellTower(key) {
   bandsL(key + 's', -400, -400, 2720, 1880, ['#141A42', '#1F2658', '#333A72', '#4E4A7C']);
   layer(key, -400, -400, 2720, 1880, () => {
@@ -75,7 +75,7 @@ function S3(lt, t) {
     xaSky('xasky'); stars('xast', 80, -700, -600, 4600, 1000, t);
     xaWall();
     const rx = lerp(60, 2700, seg(lt, 3, 6)), ph = (rx - 60) / 300;
-    xaLanterns((i, x) => i === 7 ? 1 : lt < 3 ? 0 : clamp((rx - x) / 90), t);
+    xaLanterns((i, x) => i === 7 ? 1 : lt < 3 ? 0 : clamp((rx - x) / 90), t, ease(seg(lt, 4.6, 5.6)));   // the wind gets up, blowing the way it blows under the eave
     if (first) bunny(XA_LAN[7], 606, 22, t, { glow: .25 });
     else bunny(rx, 500 - Math.abs(Math.sin(ph * Math.PI)) * 70, 60, t, { glow: .25, air: lt < 6 ? ph % 1 : undefined });
     camEnd();
@@ -254,7 +254,7 @@ function S4(lt, t) {
     rabbitLanternWC(1420, 648, 56, 1, t, 'sgeave');
     crane(1236, 646, 60, .25, { fold: true, wet: 1 - seg(lt, 10, 11) * .6 });
     const shake = lt > 10 && lt < 10.6 ? Math.sin(lt * 70) * 2.5 : 0, hopK = seg(lt, 10.9, 11.4), cx = lerp(1310, 1366, ease(hopK)), cy = 648 - Math.sin(hopK * Math.PI) * 12;
-    bunny(cx + shake, cy, 34, t, { glow: .2 });
+    bunny(cx + shake, cy, 34, t, { glow: .2, rot: -.4 * ease(seg(lt, 11.4, 11.8)) });   // and looks up
     if (lt > 10 && lt < 10.7) spatter('sgshake' + Math.floor(lt * 12), cx + 10, cy - 20, 40, 10, '#E8F0F8', { size: 1.4, a: .8, mul: false });
     rain('sgr4', 60, t, 1000, 1700, 380, 900, { a: .3 * rainA, len: 30 });
     for (let i = 0; i < 5; i++) { const ph = (t * .9 + hash('drip', i)) % 1; if (rainA > .2 || ph < .3) { ctx.fillStyle = 'rgba(230,240,250,.7)'; ctx.beginPath(); ctx.ellipse(1190 + i * 80, 672 + ph * 260, 2, 4, 0, 0, TAU); ctx.fill(); } }
@@ -268,13 +268,12 @@ function S4(lt, t) {
     ctx.save(); ctx.globalAlpha = .35; ctx.translate(0, 1600); ctx.scale(1, -1); SUPERTREES.forEach(([x, top, s], i) => { if (lt > 12.5 + i * .25) glow(x, top, 90, '#C060D0', .3); }); ctx.restore();
     camEnd();
   } else {                                        // 65–68 the puddle moon, close: a drop breaks it into gold glints that stretch into lines (→ the Yellow River)
-    const z = kf(lt, [[15, 2.6], [18, 7]], easeIn);
-    camBegin(lerp(1070, 1080, seg(lt, 15, 16)), 1192, z);
+    const z = kf(lt, [[15, 2.6], [17.2, 8.2]], easeIn);
+    camBegin(lerp(1070, 1080, seg(lt, 15, 16)), 1190, z);
     sgStreet(); sgLamps(() => 1, t);
     puddleMoon(t, { inside: () => ripples(1080, 1190, lt, [15.8, 16.2], 120, .3, '#FFFFFF', .6) });
     if (lt < 15.8) { const k = seg(lt, 15.2, 15.8); ctx.fillStyle = 'rgba(230,240,250,.85)'; ctx.beginPath(); ctx.ellipse(1080, lerp(1000, 1190, easeIn(k)), 3, 6, 0, 0, TAU); ctx.fill(); }
     camEnd();
-    blend(ease(seg(lt, 16.9, 18)), () => { camBegin(960, 540, 1.27); mooncakeTop(960, 540, 300); camEnd(); });
   }
 }
 
@@ -401,7 +400,7 @@ function S5(lt, t) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let j = 0; j < 12; j++) { const [x, y] = riverPoint(seg(lt, -.5, 3) * .9 + .05 - j * .012); glow(x, y, 90 - j * 5, '#FFD890', .28 - j * .02); }
     ctx.restore();
-    wcGlow(1100, 380, 300, '#FFE0A0', .35);
+    wcGlow(840, 500, 320, '#FFE0A0', .4); wcAt('btsun', UNIT(24), '#F48A3A', 840, 500, 70, { a: .16, mul: false, spread: .1 });
     { const [x, y] = riverPoint(seg(lt, -.5, 3) * .9 + .05); craneRider(x + 60, y - 170, 110, lt * 2.3, t); }
     camEnd();
   } else if (lt < 6) {                            // 71–74 reeds on the bank; a deer steps out and drinks; rings spread
@@ -422,8 +421,8 @@ function S5(lt, t) {
     reedClump('btr1', 180, 900, 360, 14, t); reedClump('btr2', 1700, 920, 420, 16, t); reedClump('btr3', 1150, 860, 240, 6, t, '#9A7A4A');
     camEnd();
   } else if (lt < 9) {                            // 74–77 the steelworks: the furnace opens like a second sunset, sparks drift up (slow pull back)
-    const z = kf(lt, [[6, 1.25], [9, 1]], ease);
-    camBegin(980, 560, z);
+    const z = kf(lt, [[6, 1.15], [9, 1]], ease);
+    camBegin(980, 790, z);                        // the horizon sits where the river's horizon sat
     steelworks();
     const g = ease(seg(lt, 6.4, 7.6));
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -444,15 +443,15 @@ function S5(lt, t) {
     landL('btdusk', -400, -500, 2720, 1900, ['#2E3068', '#6A5A90', '#C8A0A8', '#EABA9C'], ['#5A4A58', '#3A3040'], 1060);
     wcRect('btdg', -400, 1060, 2720, 500, '#4A4050', { a: .12, wet: true });
     const hd = 1 - ease(seg(lt, 9.2, 10.4));
-    const DX = 1250, DY = 1250, DS = 720, k = DS / 100, ax = DX - k * 40, ay = DY - k * 150;
+    const lurch = ease(seg(lt, 11.6, 12)) * 90, DX = 680 + lurch, DY = 1250, DS = 720, k = DS / 100, ax = 680 + k * 40, ay = DY - k * 150;
     moonWC(ax, lerp(1250, ay, easeOut(seg(lt, 10, 12))), 64, { glow: .8 });
-    const dd = deer(DX, DY, DS, { head: hd, flip: true, t, col: '#7A5040' });
-    { const k = seg(lt, 10.3, 10.9), [x, y] = arcPt([380, 900], [dd.antlers[0] + 6, dd.antlers[1] + 34], 260, ease(k));   // it hops up once the deer has lifted its head
-      if (lt > 9.9) bunny(x, y, 92, t, { flip: true, glow: .25, air: k > 0 && k < 1 ? k : undefined, alpha: seg(lt, 9.9, 10.3) }); }
+    const dd = deer(DX, DY, DS, { head: hd, t, col: '#7A5040', run: lt > 11.6 ? (lt - 11.6) * 2.2 : null });
+    { const k = seg(lt, 10.3, 10.9), [x, y] = arcPt([1540, 900], [dd.antlers[0] - 6, dd.antlers[1] + 34], 260, ease(k));   // it hops up once the deer has lifted its head
+      if (lt > 9.9) bunny(x, y, 92, t, { flip: false, glow: .25, air: k > 0 && k < 1 ? k : undefined, alpha: seg(lt, 9.9, 10.3) }); }
     camEnd();
   } else if (lt < 15) {                           // 80–83 the deer runs across the grass; a flower opens in every hoofprint (pan right, following)
-    const dx = lerp(200, 2600, seg(lt, 12, 15));
-    camBegin(dx + 200, 560, 1);
+    const dx = 200 + 800 * (lt - 12), cx = kf(lt, [[12, 400], [13.4, 1520], [14.6, 1640]], k => k);   // the camera lets the deer run out of frame
+    camBegin(cx, 560, 1);
     landL('btgr', -1000, -300, 4800, 1700, ['#5A5E98', '#9A8CBC', '#E0B8C0'], ['#7E9A64', '#4E6E4A'], 700);
     const gy = 900;
     for (let i = 0; ; i++) { const px = 260 + i * 110; if (px > dx - 20) break; const tb = 12 + (px - 200) / 2400 * 3; flower(px + (i % 2) * 30, gy + 20 + (i % 2) * 18, 16, seg(lt, tb + .15, tb + .6), ['#F6E0F0', '#FFF4D0', '#E8C8F0'][i % 3]); }

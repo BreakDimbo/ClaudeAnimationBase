@@ -300,6 +300,10 @@ function s1Rabbit(lt, t) {
   if (lt < 1.3) return;
   if (lt < 2.7) { const k = seg(lt, 1.3, 2.7), [x, y] = arcPt([230, 190], [960, 206], 110, ease(k)); for (let i = 1; i < 6; i++) { const [tx, ty] = arcPt([230, 190], [960, 206], 110, ease(clamp(k - i * .04))); wcGlow(tx, ty - 10, 24, '#FFF4D0', .12); } bunny(x, y, 50, t, { glow: .3, air: .25 + .5 * k }); return; }
   if (lt > 12.1) return;
+  if (lt > 7.2 && lt < 9.7) {                      // the leap from the plaque to the step, cut in the middle of the air
+    const k = lt < 7.45 ? seg(lt, 7.2, 7.45) * .45 : .55 + seg(lt, 9.45, 9.7) * .45, [x, y] = arcPt([770, 372], [1110, 910], 140, k);
+    bunny(x, y, lerp(50, 64, k), t, { air: k }); return;
+  }
   const K = lt < 11 ? S1_HOPS : [...S1_HOPS, [12.1, 975, 918]];
   bunnyAt(hopPath(lt, K, 50), lt > 9.5 ? 64 : 50, t);
 }
@@ -463,7 +467,7 @@ function S2(lt, t) {
     camBegin(cx, 540, 1);
     bjSky();
     cloudWC('bjc1', 700, 300, 280, '#FFFFFF', .9); cloudWC('bjc2', 1900, 180, 360, '#FFFFFF', .8); cloudWC('bjc3', 2500, 420, 240, '#FFFFFF', .7);
-    const C = [lerp(900, 1700, seg(lt, -1, 3)), 520];
+    const dive = ease(seg(lt, 1.9, 2.7)), C = [lerp(900, 1700, seg(lt, -1, 3)) + 260 * dive, 520 + 380 * dive];   // at the end the flock drops toward the roofs
     for (let i = 0; i < 14; i++) {
       const a = lt * 1.4 + i / 14 * TAU + hash('pg', i) * .4, R = 260 + hash('pg', i, 1) * 160;
       const x = C[0] + Math.cos(a) * R, y = C[1] + Math.sin(a) * R * .38 + hash('pg', i, 2) * 60, d = .75 + .25 * Math.sin(a);
@@ -488,9 +492,9 @@ function S2(lt, t) {
     camEnd();
   } else if (lt < 9) {                            // 20–23 persimmons ripen from green to orange one by one (slow push)
     const z = kf(lt, [[6, 1], [9, 1.12]], ease);
-    camBegin(960, 480, z);
+    camBegin(960, 346, z);                        // framed so the rabbit sits where it sat beside 兔儿爷
     persimmonTree('bjper', t, i => seg(lt, 6.2 + i * .17, 6.8 + i * .17));
-    bunny(1700, 642, 54, t, { flip: true });
+    bunny(1450, 642, 44, t);
     camEnd();
   } else if (lt < 12) {                           // 23–26 a bicycle rolls along the hutong wall; the crane rides in its basket (pan with it)
     const bx = lerp(300, 2600, seg(lt, 9, 12)), cx = bx + 60;

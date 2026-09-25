@@ -799,7 +799,7 @@ function rabbit(x, y, s, t, o = {}) {
     else { const u = (k - .5) / .5; pitch = .3 * Math.sin(u * Math.PI); hindA = .5 * (1 - u) - .35 * Math.sin(u * Math.PI); footA = 2.6 * (1 - u) * (1 - u); foreA = .4 * (1 - u) - .9 * Math.sin(u * Math.PI * .8); lift = 10 * (1 - u); }
   }
   if (air === undefined) wcAt('rab-shadow', UNIT(10), '#6C6A90', 0, 2, 55, { sy: .15, a: .06, wet: true, gran: 0 });
-  ctx.translate(0, -lift); ctx.rotate(pitch);
+  ctx.translate(0, -lift); ctx.rotate(pitch + (o.rot || 0));
   const ear = Math.sin(t * 5 + (o.ph || 0)) * .08 + (air !== undefined ? -.25 * Math.sin(air * Math.PI) : 0);
   // far ear
   ctx.save(); ctx.translate(58, -98); ctx.rotate(.08 - ear); ctx.beginPath(); ctx.ellipse(0, -30, 8, 31, 0, 0, TAU); fillW(mix(body, shade, .25)); outline(); ctx.restore();
@@ -1279,6 +1279,10 @@ function s1Rabbit(lt, t) {
   if (lt < 1.3) return;
   if (lt < 2.7) { const k = seg(lt, 1.3, 2.7), [x, y] = arcPt([230, 190], [960, 206], 110, ease(k)); for (let i = 1; i < 6; i++) { const [tx, ty] = arcPt([230, 190], [960, 206], 110, ease(clamp(k - i * .04))); wcGlow(tx, ty - 10, 24, '#FFF4D0', .12); } bunny(x, y, 50, t, { glow: .3, air: .25 + .5 * k }); return; }
   if (lt > 12.1) return;
+  if (lt > 7.2 && lt < 9.7) {                      // the leap from the plaque to the step, cut in the middle of the air
+    const k = lt < 7.45 ? seg(lt, 7.2, 7.45) * .45 : .55 + seg(lt, 9.45, 9.7) * .45, [x, y] = arcPt([770, 372], [1110, 910], 140, k);
+    bunny(x, y, lerp(50, 64, k), t, { air: k }); return;
+  }
   const K = lt < 11 ? S1_HOPS : [...S1_HOPS, [12.1, 975, 918]];
   bunnyAt(hopPath(lt, K, 50), lt > 9.5 ? 64 : 50, t);
 }
@@ -1442,7 +1446,7 @@ function S2(lt, t) {
     camBegin(cx, 540, 1);
     bjSky();
     cloudWC('bjc1', 700, 300, 280, '#FFFFFF', .9); cloudWC('bjc2', 1900, 180, 360, '#FFFFFF', .8); cloudWC('bjc3', 2500, 420, 240, '#FFFFFF', .7);
-    const C = [lerp(900, 1700, seg(lt, -1, 3)), 520];
+    const dive = ease(seg(lt, 1.9, 2.7)), C = [lerp(900, 1700, seg(lt, -1, 3)) + 260 * dive, 520 + 380 * dive];   // at the end the flock drops toward the roofs
     for (let i = 0; i < 14; i++) {
       const a = lt * 1.4 + i / 14 * TAU + hash('pg', i) * .4, R = 260 + hash('pg', i, 1) * 160;
       const x = C[0] + Math.cos(a) * R, y = C[1] + Math.sin(a) * R * .38 + hash('pg', i, 2) * 60, d = .75 + .25 * Math.sin(a);
@@ -1467,9 +1471,9 @@ function S2(lt, t) {
     camEnd();
   } else if (lt < 9) {                            // 20–23 persimmons ripen from green to orange one by one (slow push)
     const z = kf(lt, [[6, 1], [9, 1.12]], ease);
-    camBegin(960, 480, z);
+    camBegin(960, 346, z);                        // framed so the rabbit sits where it sat beside 兔儿爷
     persimmonTree('bjper', t, i => seg(lt, 6.2 + i * .17, 6.8 + i * .17));
-    bunny(1700, 642, 54, t, { flip: true });
+    bunny(1450, 642, 44, t);
     camEnd();
   } else if (lt < 12) {                           // 23–26 a bicycle rolls along the hutong wall; the crane rides in its basket (pan with it)
     const bx = lerp(300, 2600, seg(lt, 9, 12)), cx = bx + 60;
@@ -1537,7 +1541,7 @@ function xaWall() {
     XA_LAN.forEach((x, i) => limb([[x, 568], [x, 598]], 2, 'rgba(30,20,30,.7)'));
   });
 }
-function xaLanterns(lit, t) { XA_LAN.forEach((x, i) => { const l = lit(i, x); if (l > 0) glow(x, 700, 220, '#FF9A50', .22 * l); lanternWC(x, 640, 40, l, Math.sin(t * 1.3 + i * .7) * .04, 'xal' + i); }); }
+function xaLanterns(lit, t, wind = 0) { XA_LAN.forEach((x, i) => { const l = lit(i, x); if (l > 0) glow(x, 700, 220, '#FF9A50', .22 * l); lanternWC(x, 640, 40, l, Math.sin(t * 1.3 + i * .7) * .04 * (1 - wind) - .22 * wind + Math.sin(t * 5 + i) * .03 * wind, 'xal' + i); }); }
 function bellTower(key) {
   bandsL(key + 's', -400, -400, 2720, 1880, ['#141A42', '#1F2658', '#333A72', '#4E4A7C']);
   layer(key, -400, -400, 2720, 1880, () => {
@@ -1592,7 +1596,7 @@ function S3(lt, t) {
     xaSky('xasky'); stars('xast', 80, -700, -600, 4600, 1000, t);
     xaWall();
     const rx = lerp(60, 2700, seg(lt, 3, 6)), ph = (rx - 60) / 300;
-    xaLanterns((i, x) => i === 7 ? 1 : lt < 3 ? 0 : clamp((rx - x) / 90), t);
+    xaLanterns((i, x) => i === 7 ? 1 : lt < 3 ? 0 : clamp((rx - x) / 90), t, ease(seg(lt, 4.6, 5.6)));   // the wind gets up, blowing the way it blows under the eave
     if (first) bunny(XA_LAN[7], 606, 22, t, { glow: .25 });
     else bunny(rx, 500 - Math.abs(Math.sin(ph * Math.PI)) * 70, 60, t, { glow: .25, air: lt < 6 ? ph % 1 : undefined });
     camEnd();
@@ -1771,7 +1775,7 @@ function S4(lt, t) {
     rabbitLanternWC(1420, 648, 56, 1, t, 'sgeave');
     crane(1236, 646, 60, .25, { fold: true, wet: 1 - seg(lt, 10, 11) * .6 });
     const shake = lt > 10 && lt < 10.6 ? Math.sin(lt * 70) * 2.5 : 0, hopK = seg(lt, 10.9, 11.4), cx = lerp(1310, 1366, ease(hopK)), cy = 648 - Math.sin(hopK * Math.PI) * 12;
-    bunny(cx + shake, cy, 34, t, { glow: .2 });
+    bunny(cx + shake, cy, 34, t, { glow: .2, rot: -.4 * ease(seg(lt, 11.4, 11.8)) });   // and looks up
     if (lt > 10 && lt < 10.7) spatter('sgshake' + Math.floor(lt * 12), cx + 10, cy - 20, 40, 10, '#E8F0F8', { size: 1.4, a: .8, mul: false });
     rain('sgr4', 60, t, 1000, 1700, 380, 900, { a: .3 * rainA, len: 30 });
     for (let i = 0; i < 5; i++) { const ph = (t * .9 + hash('drip', i)) % 1; if (rainA > .2 || ph < .3) { ctx.fillStyle = 'rgba(230,240,250,.7)'; ctx.beginPath(); ctx.ellipse(1190 + i * 80, 672 + ph * 260, 2, 4, 0, 0, TAU); ctx.fill(); } }
@@ -1785,13 +1789,12 @@ function S4(lt, t) {
     ctx.save(); ctx.globalAlpha = .35; ctx.translate(0, 1600); ctx.scale(1, -1); SUPERTREES.forEach(([x, top, s], i) => { if (lt > 12.5 + i * .25) glow(x, top, 90, '#C060D0', .3); }); ctx.restore();
     camEnd();
   } else {                                        // 65–68 the puddle moon, close: a drop breaks it into gold glints that stretch into lines (→ the Yellow River)
-    const z = kf(lt, [[15, 2.6], [18, 7]], easeIn);
-    camBegin(lerp(1070, 1080, seg(lt, 15, 16)), 1192, z);
+    const z = kf(lt, [[15, 2.6], [17.2, 8.2]], easeIn);
+    camBegin(lerp(1070, 1080, seg(lt, 15, 16)), 1190, z);
     sgStreet(); sgLamps(() => 1, t);
     puddleMoon(t, { inside: () => ripples(1080, 1190, lt, [15.8, 16.2], 120, .3, '#FFFFFF', .6) });
     if (lt < 15.8) { const k = seg(lt, 15.2, 15.8); ctx.fillStyle = 'rgba(230,240,250,.85)'; ctx.beginPath(); ctx.ellipse(1080, lerp(1000, 1190, easeIn(k)), 3, 6, 0, 0, TAU); ctx.fill(); }
     camEnd();
-    blend(ease(seg(lt, 16.9, 18)), () => { camBegin(960, 540, 1.27); mooncakeTop(960, 540, 300); camEnd(); });
   }
 }
 
@@ -1918,7 +1921,7 @@ function S5(lt, t) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (let j = 0; j < 12; j++) { const [x, y] = riverPoint(seg(lt, -.5, 3) * .9 + .05 - j * .012); glow(x, y, 90 - j * 5, '#FFD890', .28 - j * .02); }
     ctx.restore();
-    wcGlow(1100, 380, 300, '#FFE0A0', .35);
+    wcGlow(840, 500, 320, '#FFE0A0', .4); wcAt('btsun', UNIT(24), '#F48A3A', 840, 500, 70, { a: .16, mul: false, spread: .1 });
     { const [x, y] = riverPoint(seg(lt, -.5, 3) * .9 + .05); craneRider(x + 60, y - 170, 110, lt * 2.3, t); }
     camEnd();
   } else if (lt < 6) {                            // 71–74 reeds on the bank; a deer steps out and drinks; rings spread
@@ -1939,8 +1942,8 @@ function S5(lt, t) {
     reedClump('btr1', 180, 900, 360, 14, t); reedClump('btr2', 1700, 920, 420, 16, t); reedClump('btr3', 1150, 860, 240, 6, t, '#9A7A4A');
     camEnd();
   } else if (lt < 9) {                            // 74–77 the steelworks: the furnace opens like a second sunset, sparks drift up (slow pull back)
-    const z = kf(lt, [[6, 1.25], [9, 1]], ease);
-    camBegin(980, 560, z);
+    const z = kf(lt, [[6, 1.15], [9, 1]], ease);
+    camBegin(980, 790, z);                        // the horizon sits where the river's horizon sat
     steelworks();
     const g = ease(seg(lt, 6.4, 7.6));
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -1961,15 +1964,15 @@ function S5(lt, t) {
     landL('btdusk', -400, -500, 2720, 1900, ['#2E3068', '#6A5A90', '#C8A0A8', '#EABA9C'], ['#5A4A58', '#3A3040'], 1060);
     wcRect('btdg', -400, 1060, 2720, 500, '#4A4050', { a: .12, wet: true });
     const hd = 1 - ease(seg(lt, 9.2, 10.4));
-    const DX = 1250, DY = 1250, DS = 720, k = DS / 100, ax = DX - k * 40, ay = DY - k * 150;
+    const lurch = ease(seg(lt, 11.6, 12)) * 90, DX = 680 + lurch, DY = 1250, DS = 720, k = DS / 100, ax = 680 + k * 40, ay = DY - k * 150;
     moonWC(ax, lerp(1250, ay, easeOut(seg(lt, 10, 12))), 64, { glow: .8 });
-    const dd = deer(DX, DY, DS, { head: hd, flip: true, t, col: '#7A5040' });
-    { const k = seg(lt, 10.3, 10.9), [x, y] = arcPt([380, 900], [dd.antlers[0] + 6, dd.antlers[1] + 34], 260, ease(k));   // it hops up once the deer has lifted its head
-      if (lt > 9.9) bunny(x, y, 92, t, { flip: true, glow: .25, air: k > 0 && k < 1 ? k : undefined, alpha: seg(lt, 9.9, 10.3) }); }
+    const dd = deer(DX, DY, DS, { head: hd, t, col: '#7A5040', run: lt > 11.6 ? (lt - 11.6) * 2.2 : null });
+    { const k = seg(lt, 10.3, 10.9), [x, y] = arcPt([1540, 900], [dd.antlers[0] - 6, dd.antlers[1] + 34], 260, ease(k));   // it hops up once the deer has lifted its head
+      if (lt > 9.9) bunny(x, y, 92, t, { flip: false, glow: .25, air: k > 0 && k < 1 ? k : undefined, alpha: seg(lt, 9.9, 10.3) }); }
     camEnd();
   } else if (lt < 15) {                           // 80–83 the deer runs across the grass; a flower opens in every hoofprint (pan right, following)
-    const dx = lerp(200, 2600, seg(lt, 12, 15));
-    camBegin(dx + 200, 560, 1);
+    const dx = 200 + 800 * (lt - 12), cx = kf(lt, [[12, 400], [13.4, 1520], [14.6, 1640]], k => k);   // the camera lets the deer run out of frame
+    camBegin(cx, 560, 1);
     landL('btgr', -1000, -300, 4800, 1700, ['#5A5E98', '#9A8CBC', '#E0B8C0'], ['#7E9A64', '#4E6E4A'], 700);
     const gy = 900;
     for (let i = 0; ; i++) { const px = 260 + i * 110; if (px > dx - 20) break; const tb = 12 + (px - 200) / 2400 * 3; flower(px + (i % 2) * 30, gy + 20 + (i % 2) * 18, 16, seg(lt, tb + .15, tb + .6), ['#F6E0F0', '#FFF4D0', '#E8C8F0'][i % 3]); }
@@ -2098,7 +2101,7 @@ function S6(lt, t) {
     bandsL('hhgrass', -400, 760, 2720, 700, ['#2E4A5A', '#2A4050', '#223440'], .09);
     yurt('hhyurt', 960, 840, 240, t, { lit: 1 });
     glow(960, 800, 60, '#FFB060', .6);
-    bunny(1070, 846, 56, t, { flip: true, glow: .25 });
+    { const k = seg(lt, -.2, 1.2), n = 4, h = Math.min(n - 1e-6, k * n), x = lerp(-80, 1070, k); bunny(x, 846 - Math.sin((h % 1) * Math.PI) * 60 * (k < 1 ? 1 : 0), 56, t, { glow: .25, air: k < 1 ? h % 1 : undefined }); }   // hopping in from the left
     for (let i = 0; i < 26; i++) {
       const born = -1 + i * .16, k = (lt - born) / 3.2; if (k <= 0 || k >= 1) continue;
       const x = 1015 + Math.sin(k * 5 + i * .3) * 50 * k + k * 160, y = 548 - k * 720, r = 20 + k * 90;
@@ -2110,11 +2113,12 @@ function S6(lt, t) {
     const cx = kf(lt, [[3, 1700], [6, 700]], easeIO);
     camBegin(cx, 540, 1);
     bandsL('hhridge-s', -600, -300, 3600, 1300, ['#2A3A7A', '#4E5E9E', '#8A8EC0', '#C0B0D0'], .08);
+    cloudWC('hhcloud', 1890, 172, 260, '#D8DCEE', .9);   // the smoke's cloud, where the last shot left it
     layer('hhridge-g', -600, 500, 3600, 1000, () => { wc('hhrl', [[-600, 760], [0, 700], [700, 650], [1300, 690], [2000, 640], [3000, 720], [3000, 1500], [-600, 1500]], '#2A3050', { a: .14, spread: .1 }); });
     for (let i = 0; i < 5; i++) { const x = lerp(2500, 300, seg(lt, 3 + i * .08, 6.4)) + i * 150 - (i % 2) * 40, y = 700 - Math.sin(x / 700) * 30 + (i % 2) * 14; horse(x, y, 150 + (i % 2) * 20, lt * 2.2 + i * .23, t, { flip: true }); if (!i) bunny(x + 4, y - 122 + Math.sin((lt * 2.2) * TAU * 2) * 3, 40, t, { flip: true, glow: .3 }); }
     camEnd();
   } else if (lt < 9) {                            // 92–95 大召寺: prayer flags lift in the wind, the moon rises behind the golden roof
-    camBegin(960, 540, 1);
+    camBegin(960, 300, 1);                        // the roof ridge lies on the horses' ridge line
     bandsL('hhsky', -400, -300, 2720, 1700, ['#1C2660', '#2E3A7A', '#4A5A98', '#7078AE'], .08);
     moonWC(1260, lerp(640, 180, easeOut(seg(lt, 6.2, 9))), 90, { glow: .9 });
     temple(false);
@@ -2122,13 +2126,13 @@ function S6(lt, t) {
     bunny(1000, 400, 40, t, { glow: .25 });
     camEnd();
   } else if (lt < 18) {                           // 95–98 inside the yurt: the moon slides into the skylight; 98–101 the poles light like clock hands; 101–104 the ring becomes a mooncake
-    const z = lt < 12 ? 1 : lt < 15 ? kf(lt, [[12, 1], [15, 1.12]], ease) : kf(lt, [[15, 1.12], [18, 1.75]], easeIn);
+    const z = lt < 12 ? 1 : lt < 13.5 ? kf(lt, [[12, 1], [13.5, 1.08]], ease) : kf(lt, [[13.5, 1.08], [16.4, 1.75]], easeIn);
     camBegin(960, 540, z);
     const mx = lerp(1300, 960, easeOut(seg(lt, 9.2, 11.8)));
-    skylight(lt > 11.8 ? .15 * seg(lt, 11.8, 12.5) : 0, t, { moon: () => moonWC(mx, 540, 120, { glow: .6 }), lit: (i, a) => { const hand = ((a + Math.PI / 2) / TAU + 1) % 1; return seg(lt, 12 + hand * 2.8, 12.3 + hand * 2.8); } });
+    skylight(lt > 11.8 ? .15 * seg(lt, 11.8, 12.5) : 0, t, { moon: () => moonWC(mx, 540, 120, { glow: .6 }), lit: (i, a) => { const hand = ((a + Math.PI / 2) / TAU + 1) % 1; return seg(lt, 12 + hand * 1.4, 12.2 + hand * 1.4); } });
     bunny(960, 752, 60, t, { glow: .25 });
     camEnd();
-    fillScreen('#E0502E', .55 * easeIn(seg(lt, 16.6, 18)));
+    fillScreen('#E0502E', .7 * easeIn(seg(lt, 15.2, 16.4)));
   }
 }
 
@@ -2255,6 +2259,7 @@ function S7(lt, t) {
     const tx = lt < 11.2 ? cam + 380 : lerp(cam + 380, 7280, ease(seg(lt, 11.2, 12)));
     greenTrain(Math.min(tx, 7280), 824, t, tx);
     bunny(Math.min(tx, 7280) - 70, 740, 34, t, { glow: .2 });
+    for (let i = 0; i < 3; i++) { const k = seg(lt, 11.1 + i * .15, 11.9 + i * .15); if (k > 0 && k < 1) letter(lerp(Math.min(tx, 7280) - 200 - i * 200, cam + 1100, easeIn(k)), lerp(760, 300 - i * 80, k), 60, { rot: k * .6, stamp: ['#E8762A', '#C8322E', '#7CC3A2'][i], sy: .7 }); }   // letters fly off the train
     // birds startled off the river as the train crosses the bridge
     for (let i = 0; i < 14; i++) { const b = seg(lt, 6.6 + hash('bb', i) * .6, 9); if (b <= 0 || b >= 1) continue; const x = 3500 + hash('bb', i, 1) * 400 + b * 300, y = 900 - b * (300 + hash('bb', i, 2) * 300); pigeon(x, y, 22, lt * 4 + i * .3, { col: '#4A4A5A' }); }
     const lamp = seg(lt, 11.3, 11.6);
@@ -2274,14 +2279,14 @@ function S7(lt, t) {
     camEnd();
   } else if (lt < 21) {                           // 122–125 an old brass lock on the red door: the key turns, the shackle springs open (slow push)
     const z = kf(lt, [[18, 1], [21, 1.1]], ease);
-    camBegin(1020, 520, z);
+    camBegin(960, 520, z);                        // the door's seam on the centre line, as the post box was
     const turn = ease(seg(lt, 19.3, 20)), op = backOut(seg(lt, 20, 20.4));
     brassLock(op, turn, lt - 18);
     bunny(1010, 522, 54, t);
     camEnd();
   } else {                                        // 125–128 moonlight pours out of the keyhole and fills the frame (push)
     const z = kf(lt, [[21, 1.1], [24, 6]], easeIn);
-    camBegin(lerp(1020, 1238, seg(lt, 21, 22.5)), 540, z);
+    camBegin(lerp(960, 1238, seg(lt, 21, 22.5)), 540, z);
     brassLock(1, 1, 3);
     bunny(1150, 522, 54, t, { alpha: 1 - seg(lt, 21.3, 22) });
     const g = seg(lt, 21.6, 24);
@@ -2328,7 +2333,7 @@ function S8(lt, t) {
   if (lt < 3) {                                   // 128–131 the gate at night, framed as at dawn; moonlight moves across the plaque, the gold glints
     camBegin(960, 540, 1);
     gateNight(lt, t);
-    const bx = lerp(200, 1800, seg(lt, .2, 2.8));
+    const bx = lerp(200, 1500, seg(lt, .2, 3));
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(bx - 160, 0, bx + 160, 0); g.addColorStop(0, 'rgba(200,210,255,0)'); g.addColorStop(.5, 'rgba(200,210,255,.18)'); g.addColorStop(1, 'rgba(200,210,255,0)'); ctx.fillStyle = g; ctx.fillRect(bx - 160, PLAQUE.y - 20, 320, PLAQUE.h + 40); ctx.restore();
     PLAQUE.chars.forEach(([ch, x]) => { const d = Math.abs(bx - x); if (d < 120) glow(x, PLAQUE.cy, 70, '#FFE6A0', .35 * (1 - d / 120)); });
     bunny(1070, 912, 42, t, { flip: true, glow: .3 });
@@ -2348,6 +2353,7 @@ function S8(lt, t) {
     const op = ease(seg(lt, 6.3, 8.5));
     gateNight(lt, t, { open: op, light: seg(lt, 6.5, 8) });
     RIDGE_CRANES.forEach(x => crane(x, 182, 60, .25, { fold: true }));
+    { const u = seg(lt, 6.8, 7.8); if (u > 0 && u < 1) screen(() => { const bx = lerp(1500, 2300, u); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createLinearGradient(bx - 160, 0, bx + 160, 0); g.addColorStop(0, 'rgba(200,210,255,0)'); g.addColorStop(.5, 'rgba(200,210,255,.18)'); g.addColorStop(1, 'rgba(200,210,255,0)'); ctx.fillStyle = g; ctx.fillRect(bx - 160, 0, 320, H); }); }   // the moonlight's band, still sweeping
     const rp = hopPath(lt, [[7.6, 1070, 912], [8.1, 1010, 898], [8.6, 962, 886]], 30), ra = 1 - seg(lt, 8.6, 9);
     bunnyAt(rp, lerp(42, 34, seg(lt, 7.6, 8.6)), t, { alpha: ra, glow: .3 * ra });
     camEnd();
@@ -2371,9 +2377,7 @@ function S8(lt, t) {
   } else {                                        // 140–143 a floret falls into a cup; 143–146 the moon moves from one cup into the other; 146–152 the steam twines, tilt up to the moon
     let z = 1, cx = 960, cy = 600;
     if (lt < 15) { z = kf(lt, [[12, 1.7], [15, 1.85]], ease); cx = 660; cy = 610; }
-    else if (lt < 18) { z = 1; cy = 600; }
-    else if (lt < 21) cy = kf(lt, [[18, 600], [21, 100]], easeIO);
-    else cy = kf(lt, [[21, 100], [24, -480]], easeIO);
+    else cy = kf(lt, [[17.2, 600], [22.2, -480]], easeIO);   // one tilt from the cups, up the steam, to the moon
     camBegin(cx, cy, z);
     bandsL('cupsky', -400, -1200, 2720, 2700, ['#10163C', '#1A2250', '#283064', '#3A3E70', '#4E4A70'], .08);
     stars('cupst', 80, -400, -1200, 2720, 1400, t);
@@ -2398,7 +2402,7 @@ function S8(lt, t) {
     if (lt < 15) { const lean = hop(lt, 13.5, 13.8, 10); bunny(900, 704 + lean.dy, 64, t, { flip: true, glow: .2 }); }
     else bunny(970, 704, 64, t, { flip: lt < 15.6, glow: .2 });
     // two wisps of steam, twining
-    const sa = seg(lt, 17.6, 19);
+    const sa = seg(lt, 16.8, 18);
     if (sa > 0) for (let w = 0; w < 2; w++) {
       const x0 = C[w][0], dir = w ? -1 : 1;
       ctx.save(); ctx.lineCap = 'round';
@@ -2485,6 +2489,7 @@ function S9(lt, t) {
     familyBacks(lt, t);
     s9Rabbit(lt, t);
     camEnd();
+    { const a = ease(seg(lt, 5.8, 6.6)); if (a > 0) screen(() => { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,240,200,${.1 * a})`; ctx.lineWidth = 78; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(1532, 1086); ctx.lineTo(869, 618); ctx.stroke(); }); }   // the moonbeam, on the line it will have in the next shot
   } else if (lt < 10) {                           // 159–162 the rabbit hops up a moonbeam (slow push)
     const z = kf(lt, [[7, 1.3], [10, 1.45]], ease);
     camBegin(960, 440, z);
@@ -2804,21 +2809,47 @@ function overlayShot(i, t, a) {
   drawShot(i, t); ctx = main; BF = bf;
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = clamp(a); ctx.drawImage(BUF, 0, 0); ctx.restore();
 }
-// ── the cut: the shots are written on the 180 s storyboard timeline. The film is 47 cuts taken from it at normal
-// speed, each chosen around its one event, with a transition designed for every join.
-// [story in, story out, how it arrives: null = cut, or [type, seconds] (dissolve | ripple)]
-const RIPPLE_AT = [960, 177];
+// ── the cut: the shots are written on the 180 s storyboard timeline. The film is 37 cuts taken from it at normal
+// speed, each trimmed around its one event. Every join carries one visual feature across, and no device is used twice.
+// [story in, story out, join into this cut]; join = { type, d: seconds before the cut, post: seconds after, ...params }
 const EDIT = [
-  [0, 3.3], [3.3, 7.45], [9.45, 11.5], [11.5, 13.6],                                                            // 镜1 向阳门第·晨
-  [14.0, 16.6, ['dissolve', .7]], [17.5, 20.0], [21.0, 22.8], [23.3, 25.6], [29.2, 32.0, ['dissolve', .5]],       // 镜2 北京
-  [32.0, 34.6, ['dissolve', .8]], [38.5, 40.5], [41.3, 44.0], [44.0, 46.4], [47.3, 49.4],                         // 镜3 包头
-  [50.0, 52.4, ['dissolve', .8]], [53.2, 55.6], [56.4, 58.8], [59.8, 62.2], [66.0, 68.0],                         // 镜4 呼和浩特
-  [68.2, 70.4], [71.2, 73.8], [77.5, 79.8], [80.8, 83.0], [83.8, 85.8],                                           // 镜5 西安
-  [86.4, 88.8, ['ripple', 1.2]], [89.4, 91.8], [95.6, 97.8], [98.4, 100.6], [101.0, 103.2],                       // 镜6 新加坡
-  [104.3, 106.5, ['dissolve', .5]], [107.4, 109.4], [113.6, 115.8, ['dissolve', .4]], [116.9, 120.4], [123.0, 124.8], [126.0, 127.8],   // 镜7 从前慢
-  [128.6, 131.0, ['dissolve', .8]], [134.8, 137.2], [137.4, 139.6], [143.2, 145.6], [148.0, 151.8],               // 镜8 向阳门第·夜
-  [152.2, 155.0, ['dissolve', 1]], [155.4, 158.8], [159.2, 162.0], [162.0, 164.0], [164.3, 169.2], [170.5, 172.4], // 镜9 背影 · 赏月 · 团圆
-  [173.6, 179.4, ['dissolve', 1]],                                                                                // 镜10 纸
+  [0, 7.45],                                                                         // 0  dawn colour spreads down the paper (in the shot)
+  [9.45, 13.4],                                                                      // 1  cut on action: the rabbit's leap down
+  [14.0, 16.6, { type: 'cloud', d: .9 }],                                            // 2  clouds sweep across
+  [17.5, 20.0],                                                                      // 3  the flock's line of flight continues down
+  [21.0, 22.8],                                                                      // 4  the rabbit holds its place on screen
+  [23.3, 25.6, { type: 'trunk', d: .5 }],                                            // 5  a tree trunk passes in front of the lens
+  [29.4, 32.0, { type: 'glaze', d: .9 }],                                            // 6  dusk pink stains the frame
+  [32.0, 34.6, { type: 'dissolve', d: .8 }],                                         // 7  the persimmon becomes the sun
+  [38.5, 40.5],                                                                      // 8  the horizon stays at one height
+  [41.3, 44.0],                                                                      // 9  sparks rising carry into the tilt up
+  [44.0, 46.6, { type: 'flare', d: .45, post: .7, x: 968, y: 310 }],                // 10 the rising moon flares; the light carries into the run
+  [50.0, 52.6],                                                                      // 11 exit right, enter left
+  [53.6, 55.6],                                                                      // 12 the smoke's cloud holds its place
+  [56.6, 58.8],                                                                      // 13 the ridge line becomes the roof line
+  [60.6, 66.4, { type: 'iris', d: .9 }],                                             // 14 an iris closes into the skylight
+  [68.4, 73.6],                                                                      // 15 red floods the frame, red lantern
+  [77.5, 79.8],                                                                      // 16 the wind blows the same way
+  [81.4, 85.8, { type: 'leaves', d: .7, post: .9 }],                                 // 17 leaves on the wind cross the cut
+  [86.4, 88.8, { type: 'ripple', d: 1.2, x: 960, y: 177 }],                          // 18 the rain drop's ripple
+  [89.4, 91.8, { type: 'arch', d: .8, x: 550, y: 800, w: 240, h: 290 }],             // 19 through the arch the crane flew into
+  [95.6, 97.8],                                                                      // 20 cut in on the same rabbit and lanterns
+  [98.4, 100.6],                                                                     // 21 eyeline: the rabbit looks up
+  [101.0, 103.2, { type: 'flip', d: .8, y: 560 }],                                   // 22 the sky flips into its reflection
+  [104.3, 106.5],                                                                    // 23 graphic match cut: the round gold moon is a mooncake
+  [107.4, 109.4, { type: 'scroll', d: .9 }],                                         // 24 unrolled like a hand scroll
+  [113.6, 115.8, { type: 'whip', d: .4 }],                                           // 25 whip pan along the line
+  [117.1, 120.2],                                                                    // 26 letters fly off the train into the box
+  [123.2, 127.6],                                                                    // 27 the vertical axis holds at the centre
+  [128.6, 131.0, { type: 'gather', d: 0, post: 1.1, rect: [706, 382, 508, 104] }],   // 28 the gold gathers into the four characters
+  [134.8, 137.2],                                                                    // 29 the band of moonlight keeps sweeping
+  [137.4, 139.6, { type: 'door', d: .8, rect: [662, 403, 596, 454] }],               // 30 in through the doorway
+  [143.6, 150.2, { type: 'focus', d: .7 }],                                          // 31 out of focus, into focus
+  [152.6, 158.6, { type: 'florets', d: .7, post: 1 }],                               // 32 osmanthus florets fall across the cut
+  [159.4, 163.8],                                                                    // 33 the moonbeam's diagonal continues
+  [164.3, 169.0],                                                                    // 34 reverse angle
+  [170.5, 172.9],                                                                    // 35 from the faces out to all of them
+  [173.6, 179.6, { type: 'bleach', d: 1.2 }],                                        // 36 the moonlight burns through to white paper
 ];
 const EDIT_AT = []; { let f = 0; for (const [a, b, into] of EDIT) { EDIT_AT.push({ a, b, f0: f, f1: f + (b - a), into: into || null }); f += b - a; } }
 function clipAt(T) { let i = 0; while (i < EDIT_AT.length - 1 && T >= EDIT_AT[i].f1) i++; return i; }
@@ -2830,6 +2861,123 @@ function toFilm(t, collapse = false) {
   return collapse ? DUR : null;
 }
 window.toStory = toStory; window.toFilm = toFilm;
+// ── joins: the outgoing frame is already on ctx; the incoming frame is in BUF; k runs 0 → 1 across the join ──
+const BUF3 = document.createElement('canvas'); BUF3.width = W; BUF3.height = H;
+function screen(fn) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); fn(); ctx.restore(); }
+function wobbleFront(key, P) { return P.map(([x, y], i) => [x + (hash(key, i) - .5) * 30, y + (hash(key, i, 1) - .5) * 30]); }
+function joinPre(j, k, key) {
+  const inc = () => ctx.drawImage(BUF, 0, 0), e = ease(k);
+  screen(() => {
+    switch (j.type) {
+      case 'dissolve': ctx.globalAlpha = e; inc(); break;
+      case 'cloud': {                                        // banks of cloud sweep right to left; the new sky is behind them
+        const fx = lerp(W + 900, -900, e), band = 900;
+        ctx.save(); ctx.beginPath(); ctx.rect(fx, 0, W + 2000, H); ctx.clip(); inc(); ctx.restore();
+        for (let i = 0; i < 40; i++) {                        // a deep bank of soft cloud whose middle sits on the seam
+          const x = fx + (hash(key, i) - .5) * band, y = (i / 40) * H * 1.2 - 60 + (hash(key, i, 1) - .5) * 80, r = 160 + hash(key, i, 2) * 220, a = .55 * (1 - Math.abs(x - fx) / band * 1.4);
+          if (a <= 0) continue; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(255,253,248,${a})`); g.addColorStop(.7, `rgba(246,244,250,${a * .5})`); g.addColorStop(1, 'rgba(246,244,250,0)'); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+        break;
+      }
+      case 'trunk': {                                        // a dark trunk passes close in front of the lens, left to right
+        const x = lerp(-500, W + 500, k), w = 520;
+        ctx.save(); ctx.beginPath(); ctx.rect(-10, 0, x + 10, H); ctx.clip(); inc(); ctx.restore();
+        const g = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);   // a persimmon trunk, out of focus, lit from the left
+        g.addColorStop(0, 'rgba(74,58,52,0)'); g.addColorStop(.08, 'rgba(92,72,62,.96)'); g.addColorStop(.35, 'rgba(84,64,56,1)'); g.addColorStop(.8, 'rgba(46,36,34,1)'); g.addColorStop(.93, 'rgba(40,32,30,.96)'); g.addColorStop(1, 'rgba(40,32,30,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - w / 2, -40); ctx.bezierCurveTo(x - w * .6, H * .3, x - w * .4, H * .7, x - w / 2 - 30, H + 40); ctx.lineTo(x + w / 2 + 10, H + 40); ctx.bezierCurveTo(x + w * .45, H * .6, x + w * .58, H * .3, x + w / 2, -40); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(30,22,20,.35)'; ctx.lineWidth = 10; for (let i = 0; i < 6; i++) { const bx = x - w * .3 + i * w * .12; ctx.beginPath(); ctx.moveTo(bx, -40); ctx.bezierCurveTo(bx + 20, H * .4, bx - 20, H * .7, bx + 10, H + 40); ctx.stroke(); }
+        break;
+      }
+      case 'glaze': {                                        // a pink glaze stains the old frame, then the new one comes through it
+        ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgba('#F2A6B0', .7 * Math.min(1, k * 1.6)); ctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = ease(seg(k, .45, 1)); inc();
+        break;
+      }
+      case 'iris': {                                         // the old frame survives only inside a closing circle that lands on the skylight
+        const r = lerp(1200, 214, e);
+        const g3 = BUF3.getContext('2d'); g3.setTransform(1, 0, 0, 1, 0, 0);
+        g3.clearRect(0, 0, W, H); g3.drawImage(ctx.canvas, 0, 0);
+        inc(); ctx.save(); ctx.beginPath(); ctx.arc(960, 540, r, 0, TAU); ctx.clip(); ctx.globalAlpha = 1 - ease(seg(k, .85, 1)); ctx.drawImage(BUF3, 0, 0); ctx.restore();
+        break;
+      }
+      case 'ripple': circleReveal('join' + key, j.x, j.y, lerp(0, 1400, easeIn(k)), inc, '#E8F2F4'); break;
+      case 'arch': {                                         // the new place opens out of the arch's shape
+        const s = lerp(1, 9, easeIn(k)), w = j.w * s, h = j.h * s, x = lerp(j.x, 960, e), yb = lerp(j.y + j.h / 2, H + 60, e);
+        ctx.save(); ctx.beginPath(); ctx.moveTo(x - w / 2, yb); ctx.lineTo(x - w / 2, yb - h + w / 2); ctx.arc(x, yb - h + w / 2, w / 2, Math.PI, 0); ctx.lineTo(x + w / 2, yb); ctx.closePath(); ctx.clip(); inc(); ctx.restore();
+        break;
+      }
+      case 'flip': {                                         // the sky folds down onto the water line and opens again as the reflection
+        const g3 = BUF3.getContext('2d'); g3.clearRect(0, 0, W, H); g3.drawImage(ctx.canvas, 0, 0);
+        ctx.fillStyle = '#1C1E44'; ctx.fillRect(0, 0, W, H);
+        if (k < .5) { const sy = 1 - ease(k * 2); ctx.translate(0, j.y); ctx.scale(1, Math.max(.001, sy)); ctx.translate(0, -j.y); ctx.drawImage(BUF3, 0, 0); }
+        else { const sy = ease((k - .5) * 2); ctx.translate(0, j.y); ctx.scale(1, Math.max(.001, sy)); ctx.translate(0, -j.y); inc(); }
+        break;
+      }
+      case 'scroll': {                                       // the next picture unrolls from the left, the roller rides its edge
+        const x = lerp(-60, W + 60, e);
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, x, H); ctx.clip(); inc(); ctx.restore();
+        const g = ctx.createLinearGradient(x - 40, 0, x + 40, 0); g.addColorStop(0, 'rgba(90,60,40,0)'); g.addColorStop(.35, 'rgba(210,190,160,1)'); g.addColorStop(.55, 'rgba(250,240,220,1)'); g.addColorStop(.8, 'rgba(160,120,90,1)'); g.addColorStop(1, 'rgba(90,60,40,0)');
+        ctx.fillStyle = g; ctx.fillRect(x - 40, 0, 80, H); ctx.fillStyle = '#6A3A2A'; ctx.fillRect(x - 46, 0, 92, 18); ctx.fillRect(x - 46, H - 18, 92, 18);
+        break;
+      }
+      case 'whip': {                                         // both frames streak sideways and swap in the blur
+        const g3 = BUF3.getContext('2d'); g3.clearRect(0, 0, W, H); g3.drawImage(ctx.canvas, 0, 0);
+        const off = e * W, src = k < .5 ? BUF3 : BUF, base = k < .5 ? -off : W - off;
+        ctx.fillStyle = '#E8D8C0'; ctx.fillRect(0, 0, W, H);
+        for (let i = 0; i < 12; i++) { ctx.globalAlpha = .14; ctx.drawImage(src, base - i * 60 * Math.sin(k * Math.PI), 0); }
+        ctx.globalAlpha = 1;
+        break;
+      }
+      case 'door': {                                         // the lit doorway grows until we are through it
+        const [rx, ry, rw, rh] = j.rect, x0 = lerp(rx, -20, easeIn(k)), y0 = lerp(ry, -20, easeIn(k)), x1 = lerp(rx + rw, W + 20, easeIn(k)), y1 = lerp(ry + rh, H + 20, easeIn(k));
+        ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip(); ctx.globalAlpha = ease(seg(k, 0, .35)); inc(); ctx.restore();
+        break;
+      }
+      case 'focus': {                                        // the courtyard goes soft, the cups come up out of the blur
+        const g3 = BUF3.getContext('2d'); g3.clearRect(0, 0, W, H); g3.drawImage(ctx.canvas, 0, 0);
+        ctx.filter = `blur(${(16 * e).toFixed(1)}px)`; ctx.drawImage(BUF3, 0, 0);
+        ctx.filter = `blur(${(16 * (1 - e)).toFixed(1)}px)`; ctx.globalAlpha = ease(seg(k, .3, 1)); inc(); ctx.filter = 'none';
+        break;
+      }
+      case 'flare': {                                        // the moon behind the antlers flares white; the run comes up out of the light
+        const f = ease(k); ctx.globalCompositeOperation = 'lighter';
+        for (const [r, a] of [[900 * f + 80, .5], [300 * f + 40, .7]]) { const g = ctx.createRadialGradient(j.x, j.y, 0, j.x, j.y, r); g.addColorStop(0, `rgba(255,248,228,${a * f})`); g.addColorStop(1, 'rgba(255,248,228,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+        break;
+      }
+      case 'bleach': {                                       // the gold light burns up to white, and what is left is the paper
+        ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,240,200,${.8 * easeIn(k)})`; ctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = ease(seg(k, .55, 1)); inc();
+        break;
+      }
+      case 'leaves': case 'florets': break;                  // straight cut; the drifting things are drawn over both sides
+    }
+  });
+}
+// things that cross a join and are drawn on top of both frames (u: seconds from the cut, negative before it)
+function joinOver(j, u, key) {
+  screen(() => {
+    if (j.type === 'leaves') for (let i = 0; i < 14; i++) {
+      const p = (u + 1 + hash(key, i) * .4) / 2.2; if (p <= 0 || p >= 1) continue;
+      const x = lerp(-80, W + 120, p) + Math.sin(p * 9 + i) * 40, y = lerp(900 - hash(key, i, 1) * 500, 150 - hash(key, i, 2) * 300, p);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(p * 8 + i); ctx.fillStyle = i % 3 ? 'rgba(40,64,54,.9)' : 'rgba(230,120,60,.9)'; ctx.beginPath(); ctx.ellipse(0, 0, 16, 6, 0, 0, TAU); ctx.fill(); ctx.restore();
+    }
+    if (j.type === 'florets') for (let i = 0; i < 40; i++) {
+      const p = (u + 1 + hash(key, i) * .6) / 2.4; if (p <= 0 || p >= 1) continue;
+      floret(hash(key, i, 1) * W + Math.sin(p * 6 + i) * 30, lerp(-40, H + 40, p), 7 + hash(key, i, 2) * 5, p * 6 + i, .95);
+    }
+    if (j.type === 'gather') {                               // the gold light draws itself in to the plaque and settles in the characters
+      const [rx, ry, rw, rh] = j.rect, k = ease(clamp(u / j.post)), cx = rx + rw / 2, cy = ry + rh / 2;
+      const hw = lerp(W * .75, rw * .55, k), hh = lerp(H * .75, rh * .6, k), a = 1 - ease(seg(u, j.post * .5, j.post));
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(hw, hh); const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1.2);
+      g.addColorStop(0, `rgba(250,226,160,${a})`); g.addColorStop(.6, `rgba(246,214,140,${a * .9})`); g.addColorStop(1, 'rgba(246,214,140,0)');
+      ctx.fillStyle = g; ctx.fillRect(-1.3, -1.3, 2.6, 2.6); ctx.restore();
+    }
+    if (j.type === 'flare' && u > 0) {                       // (after the cut) the light fades off the running deer
+      const f = 1 - ease(clamp(u / j.post)); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(j.x, j.y, 0, j.x, j.y, 980); g.addColorStop(0, `rgba(255,248,228,${.55 * f})`); g.addColorStop(1, 'rgba(255,248,228,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
+  });
+}
 // the one entry point: every frame is a pure function of t (film seconds)
 function render(T) {
   T = clamp(T, 0, DUR - 1e-4);
@@ -2837,12 +2985,13 @@ function render(T) {
   if (VIEW) { paperUnder(); VIEW(T); grainOver(); return; }
   const ci = clipAt(T), c = EDIT_AT[ci], nx = EDIT_AT[ci + 1], t = toStory(T);
   drawShot(shotAt(t), t);
-  if (nx && nx.into && T > nx.f0 - nx.into[1]) {                 // the next cut arriving: it starts early and is laid over this one
-    const d = nx.into[1], k = seg(T, nx.f0 - d, nx.f0), tn = nx.a - (nx.f0 - T);
+  if (nx && nx.into && nx.into.d > 0 && T > nx.f0 - nx.into.d) {      // the next cut arriving: it starts early
+    const j = nx.into, k = seg(T, nx.f0 - j.d, nx.f0), tn = nx.a - (nx.f0 - T);
     const main = ctx, bf = BF; ctx = BUF.getContext('2d'); drawShot(shotAt(nx.a + 1e-6), tn); ctx = main; BF = bf;   // (the incoming shot, running into its first frame)
-    if (nx.into[0] === 'ripple') circleReveal('into' + ci, RIPPLE_AT[0], RIPPLE_AT[1], lerp(0, 1400, easeIn(k)), () => ctx.drawImage(BUF, 0, 0), '#E8F2F4');
-    else { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = ease(k); ctx.drawImage(BUF, 0, 0); ctx.restore(); }
+    joinPre(j, k, 'j' + (ci + 1));
   }
+  if (nx && nx.into && T > nx.f0 - (nx.into.d || .7)) joinOver(nx.into, T - nx.f0, 'j' + (ci + 1));
+  if (c.into && T - c.f0 < (c.into.post || 0)) joinOver(c.into, T - c.f0, 'j' + ci);
   grainOver();
 }
 window.render = render;

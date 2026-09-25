@@ -77,7 +77,7 @@ function rabbit(x, y, s, t, o = {}) {
     else { const u = (k - .5) / .5; pitch = .3 * Math.sin(u * Math.PI); hindA = .5 * (1 - u) - .35 * Math.sin(u * Math.PI); footA = 2.6 * (1 - u) * (1 - u); foreA = .4 * (1 - u) - .9 * Math.sin(u * Math.PI * .8); lift = 10 * (1 - u); }
   }
   if (air === undefined) wcAt('rab-shadow', UNIT(10), '#6C6A90', 0, 2, 55, { sy: .15, a: .06, wet: true, gran: 0 });
-  ctx.translate(0, -lift); ctx.rotate(pitch);
+  ctx.translate(0, -lift); ctx.rotate(pitch + (o.rot || 0));
   const ear = Math.sin(t * 5 + (o.ph || 0)) * .08 + (air !== undefined ? -.25 * Math.sin(air * Math.PI) : 0);
   // far ear
   ctx.save(); ctx.translate(58, -98); ctx.rotate(.08 - ear); ctx.beginPath(); ctx.ellipse(0, -30, 8, 31, 0, 0, TAU); fillW(mix(body, shade, .25)); outline(); ctx.restore();
